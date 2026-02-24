@@ -1,0 +1,69 @@
+Mon Dec 15 21:57:42 2025
+WARNING: Nan, Inf or huge value in QACC at DOF 0. The simulation is unstable. Time = 0.0200.
+
+Mon Dec 15 22:00:01 2025
+WARNING: Nan, Inf or huge value in QACC at DOF 0. The simulation is unstable. Time = 0.0200.
+
+Mon Dec 15 22:05:18 2025
+WARNING: Nan, Inf or huge value in QACC at DOF 1. The simulation is unstable. Time = 0.4060.
+
+Mon Dec 15 22:07:34 2025
+WARNING: Nan, Inf or huge value in QACC at DOF 1. The simulation is unstable. Time = 0.4060.
+
+Thu Jan 15 13:53:29 2026
+WARNING: Insufficient arena memory for the number of constraints generated. Increase arena memory allocation above 7M bytes. Time = 0.1920.
+
+Thu Jan 15 13:53:55 2026
+WARNING: Insufficient arena memory for the number of constraints generated. Increase arena memory allocation above 7M bytes. Time = 0.0440.
+
+Thu Jan 15 13:58:42 2026
+WARNING: Insufficient arena memory for the number of constraints generated. Increase arena memory allocation above 7M bytes. Time = 0.1160.
+
+Thu Jan 15 13:58:56 2026
+WARNING: Insufficient arena memory for the number of constraints generated. Increase arena memory allocation above 7M bytes. Time = 0.0920.
+
+Thu Jan 15 20:34:22 2026
+WARNING: Insufficient arena memory for the number of constraints generated. Increase arena memory allocation above 144M bytes. Time = 0.0840.
+
+Thu Jan 15 20:36:05 2026
+WARNING: Insufficient arena memory for the number of constraints generated. Increase arena memory allocation above 250000000 bytes. Time = 0.0620.
+
+Thu Jan 15 20:40:33 2026
+WARNING: Nan, Inf or huge value in QPOS at DOF 0. The simulation is unstable. Time = 0.0660.
+
+Thu Jan 15 20:41:31 2026
+WARNING: Nan, Inf or huge value in QPOS at DOF 0. The simulation is unstable. Time = 0.1920.
+
+Thu Jan 15 20:44:04 2026
+ERROR: mj_copyDataVisual: attempting to copy mjData while stack is in use
+
+Fri Jan 16 09:30:27 2026
+ERROR: mj_copyDataVisual: attempting to copy mjData while stack is in use
+
+Wed Jan 21 06:58:49 2026
+ERROR: mj_copyDataVisual: attempting to copy mjData while stack is in use
+
+Wed Jan 21 08:11:28 2026
+ERROR: mj_copyDataVisual: attempting to copy mjData while stack is in use
+
+Fri Jan 30 01:29:24 2026
+WARNING: Nan, Inf or huge value in QACC at DOF 11. The simulation is unstable. Time = 0.6960.
+
+Fri Jan 30 01:30:16 2026
+WARNING: Nan, Inf or huge value in QACC at DOF 11. The simulation is unstable. Time = 0.6980.
+
+Fri Jan 30 02:22:37 2026
+WARNING: Nan, Inf or huge value in QACC at DOF 11. The simulation is unstable. Time = 0.6760.
+
+Fri Jan 30 02:33:33 2026
+WARNING: Nan, Inf or huge value in QACC at DOF 11. The simulation is unstable. Time = 0.6880.
+
+Fri Jan 30 02:34:10 2026
+WARNING: Nan, Inf or huge value in QACC at DOF 11. The simulation is unstable. Time = 0.6180.
+
+Wed Feb  4 12:12:21 2026
+WARNING: Nan, Inf or huge value in QACC at DOF 11. The simulation is unstable. Time = 4.3540.
+
+Wed Feb  4 12:12:44 2026
+WARNING: Nan, Inf or huge value in QACC at DOF 11. The simulation is unstable. Time = 4.4020.
+
