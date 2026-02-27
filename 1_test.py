@@ -5,7 +5,10 @@ import numpy as np
 import mujoco
 import mujoco.viewer
 
-XML_PATH = "scene_new.xml"
+# =========================
+# FILES
+# =========================
+XML_PATH = "scene_test.xml"
 JSON_PATH = "battery_grip_data.json"
 
 # =========================
@@ -39,9 +42,26 @@ IK_ITERS_PER_CYCLE = 8
 IK_DAMP = 0.02
 IK_STEP = 0.55
 
-# Gripper open commands (actuator ctrl)
-OPEN_L_CMD = 0.00875
-OPEN_R_CMD = -0.00875
+# =========================
+# GRIPPER OPEN LIMIT (battery width + 3mm total)
+# battery collision half-width = 0.00725 -> width = 0.0145
+# max opening = 0.0145 + 0.003 = 0.0175 -> per finger = 0.00875
+# =========================
+BATTERY_HALF_WIDTH = 0.00725
+BATTERY_DIAMETER = 2.0 * BATTERY_HALF_WIDTH               # 0.0145 m
+
+MAX_GRIPPER_OPENING = BATTERY_DIAMETER + 0.003            # meters (total)
+MAX_FINGER_OPEN_CMD = MAX_GRIPPER_OPENING / 2.0           # meters (per finger)
+
+OPEN_L_CMD = float(MAX_FINGER_OPEN_CMD)
+OPEN_R_CMD = float(-MAX_FINGER_OPEN_CMD)
+
+# =========================
+# CLOSE LIMIT (do NOT close below diameter - squeeze allowance)
+# Example: 0.5mm squeeze -> min pinch = 0.0145 - 0.0005 = 0.0140
+# =========================
+SQUEEZE_ALLOW = 0.0005   # meters (0.5mm). Change to 0.0003, 0.001, etc.
+MIN_PINCH = BATTERY_DIAMETER - SQUEEZE_ALLOW
 
 # Closing
 CLOSE_MAG = 0.016
@@ -50,23 +70,22 @@ CLOSE_HOLD_TIME = 0.8
 POST_CLOSE_HOLD = 0.25
 
 # ===== Grasp robustness tuning =====
-FRICTION_MULT = 3.0       # 2..6
-FRICTION_SLIDE_CAP = 25.0 # clamp slide to avoid solver instability
-SQUEEZE_EXTRA = 0.010     # extra close in joint units (tune 0.002..0.010)
-GRIPPER_STRENGTH_MULT = 2.0  # 1..4
+FRICTION_MULT = 3.0
+FRICTION_SLIDE_CAP = 25.0
+GRIPPER_STRENGTH_MULT = 2.0
 
-HOLD_AFTER_DONE_SECONDS = 2.0  # keep holding/attaching after pick to prevent end-slip
+HOLD_AFTER_DONE_SECONDS = 3.0
 
 # Actuator names (match your XML)
 ARM_ACT_NAMES = ["shoulder_pan", "shoulder_lift", "forearm", "wrist_1", "wrist_2", "wrist_3"]
 
-# Finger collision geoms to disable during approach
+# Finger collision geoms to disable during approach (ONLY collision geoms)
 FINGER_COL_GEOMS = ["ee_left_col", "ee_right_col"]
 
-# Soft attach (optional)
+# Soft attach (magnet cheat)
 ENABLE_SOFT_ATTACH = True
-ATTACH_PINCH_DIST_THRESH = 0.030
-ATTACH_MIN_CONTACTS = 1
+ATTACH_MIN_CONTACTS = 2                 # require BOTH col contacts
+ATTACH_PINCH_DIST_THRESH = 0.030        # must be somewhat closed too
 
 
 # =========================
@@ -85,9 +104,7 @@ def site_id(model, name):     return _id(model, mujoco.mjtObj.mjOBJ_SITE, name)
 def geom_id(model, name):     return mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, name)
 def geom_id_strict(model, name): return _id(model, mujoco.mjtObj.mjOBJ_GEOM, name)
 
-
 def body_geom_ids(model, body_name: str):
-    """Return list of geom ids belonging to a body (including unnamed geoms)."""
     bid = body_id(model, body_name)
     gadr = int(model.body_geomadr[bid])
     gnum = int(model.body_geomnum[bid])
@@ -95,7 +112,7 @@ def body_geom_ids(model, body_name: str):
 
 
 # =========================
-# JSON LOADER (your uploaded schema)
+# JSON LOADER
 # =========================
 def load_battery_params(json_path: str):
     """
@@ -139,41 +156,8 @@ def clamp_above_table(p, table_top_z):
 
 
 # =========================
-# DEBUG WORLD
+# CONTACT DEBUG
 # =========================
-def dbg_world(model, data):
-    sid_tip = site_id(model, "tcp_tip")
-    sid_L = site_id(model, "pinch_L")
-    sid_R = site_id(model, "pinch_R")
-
-    gid_padL = geom_id_strict(model, "ee_left_pad")
-    gid_padR = geom_id_strict(model, "ee_right_pad")
-
-    tcp_tip_w = data.site_xpos[sid_tip].copy()
-    pinch_L_w = data.site_xpos[sid_L].copy()
-    pinch_R_w = data.site_xpos[sid_R].copy()
-
-    padL_w = data.geom_xpos[gid_padL].copy()
-    padR_w = data.geom_xpos[gid_padR].copy()
-
-    mid = 0.5 * (pinch_L_w + pinch_R_w)
-    off = tcp_tip_w - mid
-
-    dL = float(np.linalg.norm(tcp_tip_w - padL_w))
-    dR = float(np.linalg.norm(tcp_tip_w - padR_w))
-
-    print("----- DEBUG WORLD -----")
-    print("tcp_tip   world:", tcp_tip_w)
-    print("pinch_L   world:", pinch_L_w)
-    print("pinch_R   world:", pinch_R_w)
-    print("pinch_mid world:", mid)
-    print("tcp_tip - mid  :", off)
-    print("left_pad  world:", padL_w)
-    print("right_pad world:", padR_w)
-    print("dist tcp_tip->left_pad :", dL)
-    print("dist tcp_tip->right_pad:", dR)
-    print("-----------------------")
-
 def print_contacts(model, data, max_lines=12):
     n = int(data.ncon)
     if n == 0:
@@ -206,12 +190,9 @@ def set_finger_collision(model, enable: bool):
 
 
 # =========================
-# FRICTION + STRENGTH BOOSTERS (Python-only)
+# FRICTION + STRENGTH BOOSTERS
 # =========================
 def boost_friction(model, geom_names, mult=3.0, slide_cap=25.0):
-    """
-    Multiply geom friction (slide/torsion/roll). Clamp slide to avoid solver instability.
-    """
     for name in geom_names:
         gid = geom_id(model, name)
         if gid == -1:
@@ -220,8 +201,8 @@ def boost_friction(model, geom_names, mult=3.0, slide_cap=25.0):
         fr *= mult
         fr[0] = min(fr[0], slide_cap)
         model.geom_friction[gid] = fr
+
 def boost_friction_ids(model, geom_ids, mult=3.0, slide_cap=25.0):
-    """Same as boost_friction but uses numeric geom ids (works for unnamed geoms)."""
     for gid in geom_ids:
         if gid < 0 or gid >= model.ngeom:
             continue
@@ -230,12 +211,7 @@ def boost_friction_ids(model, geom_ids, mult=3.0, slide_cap=25.0):
         fr[0] = min(fr[0], slide_cap)
         model.geom_friction[gid] = fr
 
-
-
 def boost_gripper_strength(model, mult=2.0):
-    """
-    Increase effective actuator strength for position servos by scaling gear + forcerange.
-    """
     for name in ["ee_gripper_left", "ee_gripper_right"]:
         aid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, name)
         if aid < 0:
@@ -246,7 +222,7 @@ def boost_gripper_strength(model, mult=2.0):
 
 
 # =========================
-# ARM IDS (STRICT)
+# ARM IDS
 # =========================
 def get_arm_actuator_ids_strict(model):
     return [actuator_id(model, n) for n in ARM_ACT_NAMES]
@@ -275,8 +251,10 @@ def sync_arm_ctrl_to_qpos(model, data, arm_act_ids):
 def set_gripper_open(model, data):
     aL = actuator_id(model, "ee_gripper_left")
     aR = actuator_id(model, "ee_gripper_right")
-    data.ctrl[aL] = float(OPEN_L_CMD)
-    data.ctrl[aR] = float(OPEN_R_CMD)
+
+    # Open is limited in software to diameter+3mm total
+    data.ctrl[aL] = float(np.clip(OPEN_L_CMD, model.actuator_ctrlrange[aL, 0], model.actuator_ctrlrange[aL, 1]))
+    data.ctrl[aR] = float(np.clip(OPEN_R_CMD, model.actuator_ctrlrange[aR, 0], model.actuator_ctrlrange[aR, 1]))
 
 def set_gripper_close_targets(model, data, closeL, closeR):
     aL = actuator_id(model, "ee_gripper_left")
@@ -337,18 +315,16 @@ def autocalibrate_close_targets(model, data):
     closeR = float(np.clip(closeR, rR[0], rR[1]))
 
     print("[AUTO-CAL] pinch distance d0:", d0)
-    print("[AUTO-CAL] left  d(+eps):", dL_plus, " d(-eps):", dL_minus, " chosen dir:", dirL)
-    print("[AUTO-CAL] right d(+eps):", dR_plus, " d(-eps):", dR_minus, " chosen dir:", dirR)
     print("[AUTO-CAL] close targets -> left:", closeL, " right:", closeR)
     return closeL, closeR
 
 
 # =========================
-# DESIRED ORIENTATION (FIXED YAW, VERTICAL TOOL)
+# DESIRED ORIENTATION
 # =========================
 def desired_tcp_R_vertical():
-    z = np.array([0.0, 0.0, 1.0])   # tool Z up
-    y = np.array([0.0, 1.0, 0.0])   # fix yaw
+    z = np.array([0.0, 0.0, 1.0])
+    y = np.array([0.0, 1.0, 0.0])
     x = np.cross(y, z)
     x = x / (np.linalg.norm(x) + 1e-12)
     y = np.cross(z, x)
@@ -366,7 +342,7 @@ def rotvec_from_R(Rerr):
 
 
 # =========================
-# JOINT-SPACE IK STEP (POSE)
+# IK STEP
 # =========================
 def ik_step_pose_qpos(model, data, site_name, target_pos, target_R,
                       arm_joint_ids, damp=IK_DAMP, step=IK_STEP):
@@ -524,12 +500,84 @@ def close_gripper_ramp_hold(model, data, lock, hold_site, hold_pos, hold_R,
         time.sleep(DT_SLEEP)
 
     with lock:
-        jL = joint_id(model, "ee_gripper_left_joint")
-        jR = joint_id(model, "ee_gripper_right_joint")
-        qL = float(data.qpos[model.jnt_qposadr[jL]])
-        qR = float(data.qpos[model.jnt_qposadr[jR]])
-        print(f"[GRIPPER QPOS] left={qL:.6f} right={qR:.6f}")
         print(f"[PINCH DIST] {pinch_distance(model, data):.6f} m")
+
+
+# =========================
+# COL-CONTACT + PINCH-LIMIT TIGHTENING
+# =========================
+def col_contacts_left_right(model, data, battery_geom_ids):
+    left_col = geom_id_strict(model, "ee_left_col")
+    right_col = geom_id_strict(model, "ee_right_col")
+    batt_ids = set(battery_geom_ids)
+
+    left_ok = False
+    right_ok = False
+    for i in range(int(data.ncon)):
+        c = data.contact[i]
+        g1 = int(c.geom1)
+        g2 = int(c.geom2)
+        if (g1 == left_col and g2 in batt_ids) or (g2 == left_col and g1 in batt_ids):
+            left_ok = True
+        if (g1 == right_col and g2 in batt_ids) or (g2 == right_col and g1 in batt_ids):
+            right_ok = True
+    return left_ok, right_ok
+
+def tighten_until_both_cols_contact_with_pinch_limit(
+    model, data, lock,
+    battery_geom_ids,
+    hold_site, hold_pos, hold_R,
+    arm_joint_ids, arm_act_ids,
+    closeL, closeR,
+    min_pinch,
+    max_iters=60,
+    step=0.0010
+):
+    """
+    Tighten until BOTH col boxes touch the battery.
+    But never allow pinch_distance to go below min_pinch.
+    """
+    jL = joint_id(model, "ee_gripper_left_joint")
+    jR = joint_id(model, "ee_gripper_right_joint")
+    rL = model.jnt_range[jL]
+    rR = model.jnt_range[jR]
+
+    pinch_limited = False
+
+    for _ in range(max_iters):
+        with lock:
+            mujoco.mj_forward(model, data)
+
+            pd = pinch_distance(model, data)
+            left_ok, right_ok = col_contacts_left_right(model, data, battery_geom_ids)
+
+            if left_ok and right_ok:
+                return closeL, closeR, True, pinch_limited
+
+            if pd <= min_pinch:
+                pinch_limited = True
+                return closeL, closeR, False, pinch_limited
+
+            newL = float(np.clip(closeL - step, rL[0], rL[1]))
+            newR = float(np.clip(closeR + step, rR[0], rR[1]))
+
+            if abs(newL - closeL) < 1e-12 and abs(newR - closeR) < 1e-12:
+                return closeL, closeR, False, pinch_limited
+
+            closeL, closeR = newL, newR
+            set_gripper_close_targets(model, data, closeL, closeR)
+
+            for _ in range(IK_ITERS_PER_CYCLE):
+                _ = ik_step_pose_qpos(model, data, hold_site, hold_pos, hold_R, arm_joint_ids)
+                mujoco.mj_forward(model, data)
+            sync_arm_ctrl_to_qpos(model, data, arm_act_ids)
+
+            for _ in range(SUBSTEPS):
+                mujoco.mj_step(model, data)
+
+        time.sleep(DT_SLEEP)
+
+    return closeL, closeR, False, pinch_limited
 
 
 # =========================
@@ -544,17 +592,6 @@ def get_freejoint_qadr(model, body_name):
     if model.jnt_type[jid] != mujoco.mjtJoint.mjJNT_FREE:
         raise RuntimeError(f"Body {body_name} is not freejoint.")
     return model.jnt_qposadr[jid], model.jnt_dofadr[jid]
-
-def count_finger_battery_contacts(model, data, battery_geom_ids, finger_geom_ids):
-    n = int(data.ncon)
-    cnt = 0
-    for i in range(n):
-        c = data.contact[i]
-        g1 = int(c.geom1)
-        g2 = int(c.geom2)
-        if (g1 in finger_geom_ids and g2 in battery_geom_ids) or (g2 in finger_geom_ids and g1 in battery_geom_ids):
-            cnt += 1
-    return cnt
 
 def mat_to_quat(Rm):
     q = np.zeros(4)
@@ -580,7 +617,7 @@ def quat_rot(q, v):
 
 
 # =========================
-# LIVE TARGETS (battery may drift on table)
+# LIVE TARGETS
 # =========================
 def compute_tcp_targets_live(model, data, bid_batt, R_des, rel_tcp, pre_off, grip_off, post_off):
     batt_pos = data.xpos[bid_batt].copy()
@@ -607,13 +644,6 @@ def run_sequence(model, data, lock):
     arm_act_ids = get_arm_actuator_ids_strict(model)
     arm_joint_ids = get_arm_joint_ids_from_actuators(model, arm_act_ids)
 
-    # Finger & battery geom sets for contact detection
-    finger_geom_ids = set()
-    for gn in ["ee_left_col", "ee_right_col", "ee_left_pad", "ee_right_pad"]:
-        gid = geom_id(model, gn)
-        if gid != -1:
-            finger_geom_ids.add(gid)
-
     bid_batt = body_id(model, "battery")
     gadr = model.body_geomadr[bid_batt]
     gnum = model.body_geomnum[bid_batt]
@@ -622,7 +652,6 @@ def run_sequence(model, data, lock):
     batt_qadr, batt_dofadr = get_freejoint_qadr(model, "battery")
 
     with lock:
-        # Initial state
         pan = joint_id(model, "shoulder_pan_joint")
         arm_qpos_adr = model.jnt_qposadr[pan]
         data.qpos[arm_qpos_adr:arm_qpos_adr + 6] = SAFE_HOME_Q
@@ -633,9 +662,7 @@ def run_sequence(model, data, lock):
         set_gripper_open(model, data)
         set_finger_collision(model, enable=False)
 
-        # Friction + strength boosts
         boost_friction(model, ["ee_left_col", "ee_right_col"], mult=FRICTION_MULT, slide_cap=FRICTION_SLIDE_CAP)
-        # battery collision geom in XML may be unnamed -> boost all battery body geoms
         boost_friction_ids(model, body_geom_ids(model, "battery"), mult=FRICTION_MULT, slide_cap=FRICTION_SLIDE_CAP)
         boost_gripper_strength(model, mult=GRIPPER_STRENGTH_MULT)
 
@@ -648,7 +675,6 @@ def run_sequence(model, data, lock):
             print("[WARN] Could not detect table top. No Z clamp.")
 
         print("[OK] Initialized home, gripper open, finger collision OFF")
-        dbg_world(model, data)
 
     time.sleep(T_HOME_SETTLE)
 
@@ -667,13 +693,9 @@ def run_sequence(model, data, lock):
     move_interp_pose(model, data, lock, SITE_TCP, p0, tcp_pre, R_des,
                      arm_joint_ids, arm_act_ids, T_TO_PRE, table_top_z)
 
-    ok_pre, *_ = gate_reach_pose(model, data, lock, SITE_TCP, tcp_pre, R_des,
-                                 arm_joint_ids, arm_act_ids, label="PRE",
-                                 pos_tol=POS_TOL_PRE, rot_tol=ROT_TOL)
-
-    with lock:
-        mujoco.mj_forward(model, data)
-        dbg_world(model, data)
+    gate_reach_pose(model, data, lock, SITE_TCP, tcp_pre, R_des,
+                    arm_joint_ids, arm_act_ids, label="PRE",
+                    pos_tol=POS_TOL_PRE, rot_tol=ROT_TOL)
 
     print(f"[STEP] WAIT at PRE_GRIP for {WAIT_AT_PRE:.1f}s")
     t_wait = time.time()
@@ -690,7 +712,7 @@ def run_sequence(model, data, lock):
                 mujoco.mj_step(model, data)
         time.sleep(DT_SLEEP)
 
-    # GRIP (split approach to avoid penetration "pop")
+    # GRIP
     with lock:
         mujoco.mj_forward(model, data)
         _, tcp_grip, _ = compute_tcp_targets_live(model, data, bid_batt, R_des, rel_tcp, pre_off, grip_off, post_off)
@@ -707,95 +729,63 @@ def run_sequence(model, data, lock):
     move_interp_pose(model, data, lock, SITE_TCP, p1, tcp_near, R_des,
                      arm_joint_ids, arm_act_ids, T_TO_GRIP, table_top_z)
 
-    print("[STEP] Enable finger collision BEFORE final approach")
+    print("[STEP] Enable finger col geoms BEFORE final approach")
     with lock:
         set_finger_collision(model, enable=True)
         mujoco.mj_forward(model, data)
 
-    print("[STEP] tcp_tip -> GRIP_POINT (collision ON, slow, LIVE target)")
-    t0 = time.time()
-    ok_grip = False
-    while time.time() - t0 < 8.0:
-        with lock:
-            mujoco.mj_forward(model, data)
-            _, tcp_grip_live, _ = compute_tcp_targets_live(model, data, bid_batt, R_des, rel_tcp, pre_off, grip_off, post_off)
-            tcp_grip_live = clamp_above_table(tcp_grip_live, table_top_z)
-            p_cur = data.site_xpos[site_id(model, SITE_TCP)].copy()
+    print("[STEP] tcp_tip -> GRIP_POINT (collision ON)")
+    gate_reach_pose(model, data, lock, SITE_TCP, tcp_grip, R_des,
+                    arm_joint_ids, arm_act_ids, label="GRIP",
+                    pos_tol=POS_TOL_GRIP, rot_tol=ROT_TOL)
 
-        # short incremental move towards live grip
-        p_step = p_cur + 0.25 * (tcp_grip_live - p_cur)
-        move_interp_pose(model, data, lock, SITE_TCP, p_cur, p_step, R_des,
-                         arm_joint_ids, arm_act_ids, 0.15, table_top_z)
-
-        ok_grip, _, _ = gate_reach_pose(model, data, lock, SITE_TCP, tcp_grip_live, R_des,
-                                        arm_joint_ids, arm_act_ids, label="GRIP",
-                                        pos_tol=POS_TOL_GRIP, rot_tol=ROT_TOL)
-        if ok_grip:
-            break
-
-    with lock:
-        mujoco.mj_forward(model, data)
-        dbg_world(model, data)
-
-    if not ok_grip:
-        print("[STOP] GRIP pose not reached closely enough -> not closing.")
-        return
-
-    # Close targets + extra squeeze (more normal force)
+    # Close
     with lock:
         mujoco.mj_forward(model, data)
         closeL, closeR = autocalibrate_close_targets(model, data)
 
-        closeL -= SQUEEZE_EXTRA
-        closeR += SQUEEZE_EXTRA
-
+        # Make sure we START from a reasonable close target (not exploding)
         jL = joint_id(model, "ee_gripper_left_joint")
         jR = joint_id(model, "ee_gripper_right_joint")
         rL = model.jnt_range[jL]
         rR = model.jnt_range[jR]
         closeL = float(np.clip(closeL, rL[0], rL[1]))
         closeR = float(np.clip(closeR, rR[0], rR[1]))
-        print("[SQUEEZE] close targets -> left:", closeL, " right:", closeR)
-
-        # refresh live grip target (in case object moved)
-        _, tcp_grip, _ = compute_tcp_targets_live(model, data, bid_batt, R_des, rel_tcp, pre_off, grip_off, post_off)
-        tcp_grip = clamp_above_table(tcp_grip, table_top_z)
 
     print("[STEP] CLOSE gripper (ramp) while HOLDING GRIP pose")
     close_gripper_ramp_hold(model, data, lock, SITE_TCP, tcp_grip, R_des,
                             arm_joint_ids, arm_act_ids, closeL, closeR)
 
+    # Tighten until BOTH cols touch, but do NOT go below MIN_PINCH
+    print("[STEP] Tighten until BOTH col boxes touch the battery (pre-magnet)")
+    closeL, closeR, cols_ok, pinch_limited = tighten_until_both_cols_contact_with_pinch_limit(
+        model, data, lock,
+        battery_geom_ids=battery_geom_ids,
+        hold_site=SITE_TCP, hold_pos=tcp_grip, hold_R=R_des,
+        arm_joint_ids=arm_joint_ids, arm_act_ids=arm_act_ids,
+        closeL=closeL, closeR=closeR,
+        min_pinch=MIN_PINCH,
+        max_iters=60,
+        step=0.0010
+    )
+
     with lock:
         mujoco.mj_forward(model, data)
+        left_ok, right_ok = col_contacts_left_right(model, data, battery_geom_ids)
+        pd = pinch_distance(model, data)
+        print(f"[COLS_OK] {cols_ok}  closeL={closeL:.6f} closeR={closeR:.6f}")
+        print(f"[COL CONTACT] left={left_ok} right={right_ok}")
+        print(f"[PINCH] {pd:.6f}  MIN_PINCH={MIN_PINCH:.6f}  pinch_limited={pinch_limited}")
         print_contacts(model, data, max_lines=25)
 
-    print(f"[STEP] HOLD after close for {POST_CLOSE_HOLD:.2f}s (LIVE target)")
-    t_hold = time.time()
-    while time.time() - t_hold < POST_CLOSE_HOLD:
-        with lock:
-            mujoco.mj_forward(model, data)
-            _, tcp_grip_live, _ = compute_tcp_targets_live(model, data, bid_batt, R_des, rel_tcp, pre_off, grip_off, post_off)
-            tcp_grip_live = clamp_above_table(tcp_grip_live, table_top_z)
-
-            set_gripper_close_targets(model, data, closeL, closeR)
-            for _ in range(IK_ITERS_PER_CYCLE):
-                _ = ik_step_pose_qpos(model, data, SITE_TCP, tcp_grip_live, R_des, arm_joint_ids)
-                mujoco.mj_forward(model, data)
-            sync_arm_ctrl_to_qpos(model, data, arm_act_ids)
-            for _ in range(SUBSTEPS):
-                mujoco.mj_step(model, data)
-        time.sleep(DT_SLEEP)
-
-    # ========= PATCH: Freeze post-grip target after grasp =========
-    # This prevents "runaway" where post target is recomputed from an object pose
-    # that you are also driving via soft-attach.
+    # ========= Freeze post target after grasp =========
     with lock:
         mujoco.mj_forward(model, data)
-        batt_pos_ref = data.xpos[bid_batt].copy()  # freeze reference
+        batt_pos_ref = data.xpos[bid_batt].copy()
     obj_post_ref = batt_pos_ref + post_off
     tcp_post_frozen = clamp_above_table(obj_post_ref - rel_tcp_world, table_top_z)
 
-    # Soft attach decision AFTER settle
+    # Soft attach (magnet) ONLY if both cols touch + pinch threshold
     attached = False
     tcp_to_batt_pos = None
     tcp_to_batt_quat = None
@@ -804,10 +794,9 @@ def run_sequence(model, data, lock):
         with lock:
             mujoco.mj_forward(model, data)
             pd = pinch_distance(model, data)
-            cnum = count_finger_battery_contacts(model, data, battery_geom_ids, finger_geom_ids)
-            print(f"[ATTACH CHECK AFTER HOLD] pinch_dist={pd:.6f}  finger-battery-contacts={cnum}")
+            left_ok, right_ok = col_contacts_left_right(model, data, battery_geom_ids)
 
-            if pd < ATTACH_PINCH_DIST_THRESH and cnum >= ATTACH_MIN_CONTACTS:
+            if left_ok and right_ok and (pd < ATTACH_PINCH_DIST_THRESH):
                 sid = site_id(model, SITE_TCP)
                 tcp_pos = data.site_xpos[sid].copy()
                 tcp_R = data.site_xmat[sid].reshape(3, 3).copy()
@@ -824,12 +813,12 @@ def run_sequence(model, data, lock):
                 tcp_to_batt_pos = rel_pos_tcp
                 tcp_to_batt_quat = rel_q
                 attached = True
-                print("[ATTACH] Soft-attached battery to tcp_tip for lift.")
+                print("[MAGNET] Attached (both col contacts + pinch ok).")
             else:
-                print("[ATTACH] Not attaching (insufficient squeeze/contact).")
+                print("[MAGNET] Not attaching (missing both col contacts or pinch too wide).")
 
-    # Lift (POST) using FROZEN target to avoid going above the planned post_grip
-    print("[STEP] tcp_tip -> POST_GRIP (vertical lift, FROZEN target)")
+    # Lift (POST)
+    print("[STEP] tcp_tip -> POST_GRIP (vertical lift)")
     with lock:
         mujoco.mj_forward(model, data)
         p2 = data.site_xpos[site_id(model, SITE_TCP)].copy()
@@ -851,7 +840,6 @@ def run_sequence(model, data, lock):
             sync_arm_ctrl_to_qpos(model, data, arm_act_ids)
             set_gripper_close_targets(model, data, closeL, closeR)
 
-            # If attached, enforce follow
             if attached and tcp_to_batt_pos is not None:
                 sid = site_id(model, SITE_TCP)
                 tcp_pos = data.site_xpos[sid].copy()
@@ -872,32 +860,25 @@ def run_sequence(model, data, lock):
             break
         time.sleep(DT_SLEEP)
 
-    # Gate to frozen post
-    ok_post, *_ = gate_reach_pose(model, data, lock, SITE_TCP, tcp_post_frozen, R_des,
-                                  arm_joint_ids, arm_act_ids, label="POST",
-                                  pos_tol=POS_TOL_PRE, rot_tol=ROT_TOL)
+    gate_reach_pose(model, data, lock, SITE_TCP, tcp_post_frozen, R_des,
+                    arm_joint_ids, arm_act_ids, label="POST",
+                    pos_tol=POS_TOL_PRE, rot_tol=ROT_TOL)
 
     with lock:
         mujoco.mj_forward(model, data)
-        dbg_world(model, data)
         print("[BATTERY Z]", float(data.xpos[bid_batt][2]))
         print_contacts(model, data, max_lines=25)
 
     print("[DONE] Pick sequence finished.")
 
-
-    # Keep holding after sequence to prevent the small end-slip that can happen
-    # when the control thread exits but physics keeps running in the viewer loop.
     if HOLD_AFTER_DONE_SECONDS and HOLD_AFTER_DONE_SECONDS > 0:
-        print(f"[HOLD] Maintaining grasp for {HOLD_AFTER_DONE_SECONDS:.2f}s to prevent settling slip.")
+        print(f"[HOLD] Maintaining grasp for {HOLD_AFTER_DONE_SECONDS:.2f}s")
         t_hold = time.time()
         while time.time() - t_hold < HOLD_AFTER_DONE_SECONDS:
             with lock:
-                # keep arm ctrl synced (hold pose) and keep gripper closed
                 sync_arm_ctrl_to_qpos(model, data, arm_act_ids)
                 set_gripper_close_targets(model, data, closeL, closeR)
 
-                # keep soft-attach active if it was engaged
                 if attached and tcp_to_batt_pos is not None:
                     sid = site_id(model, SITE_TCP)
                     tcp_pos = data.site_xpos[sid].copy()
@@ -912,7 +893,6 @@ def run_sequence(model, data, lock):
                     data.qvel[batt_dofadr:batt_dofadr + 6] = 0.0
 
                 mujoco.mj_forward(model, data)
-
             time.sleep(DT_SLEEP)
 
 

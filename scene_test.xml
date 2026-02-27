@@ -12,7 +12,7 @@
             tolerance="1e-10"
             impratio="20"-->
     <option 
-            integrator="implicitfast" timestep="0.002" iterations="50" tolerance="1e-4" impratio="10" cone="elliptic"/>
+            integrator="implicitfast" timestep="0.001" iterations="100" tolerance="1e-4" impratio="10" cone="elliptic"/>
     <!--size njmax="600" nconmax="150" nstack="300000"/-->
 
     <default>
@@ -198,12 +198,12 @@
                                             <body name="ee_gripper_left_link" pos="0.0005 0 0" quat="1 0 0 0">
                                                 <inertial pos="-0.01 0 0" mass="0.01" diaginertia="1.66e-08 1.66e-08 1.66e-08" />
                                                 
-                                                <joint name="ee_gripper_left_joint" type="slide" axis="0 1 0" limited="true" range="-0.006 0.04" />
+                                                <joint name="ee_gripper_left_joint" type="slide" axis="0 1 0" limited="true" range="-0.04 0.04" />
 
                                                 <geom name="ee_left_visual" type="mesh" mesh="zimmer_gripper_left" material="ur5_mat" contype="0" conaffinity="0" group="1"/>
 
-                                                <geom name="ee_left_col" type="box" size="0.05 0.004 0.015" pos="-0.005 0.018 -0.17" 
-                                                    rgba="0 1 0 0.25" group="0" friction="10 0.05 0.01" solref="0.004 1" solimp="0.9 0.95 0.001" condim="4" priority="100"/> 
+                                                <geom name="ee_left_col" type="box" size="0.05 0.002 0.015" pos="-0.005 0.018 -0.17" contype="2" conaffinity="1" margin="0.001"
+                                                    rgba="0 1 0 0.25" group="0" friction="10 0.05 0.01" solref="0.01 1" solimp="0.9 0.95 0.001" condim="4" priority="100"/> 
 
                                                 <site name="pinch_L" pos="-0.005 0.018 -0.170" size="0.002" type="sphere" rgba="0 1 1 1"/>
 
@@ -214,12 +214,12 @@
                                             <body name="ee_gripper_right_link" pos="-0.0005 0 0" quat="1 0 0 0">
                                                 <inertial pos="0.01 0 0" mass="0.01" diaginertia="1.66e-08 1.66e-08 1.66e-08" />
                                                 
-                                                <joint name="ee_gripper_right_joint" type="slide" axis="0 1 0" limited="true" range="-0.04 0.006" />
+                                                <joint name="ee_gripper_right_joint" type="slide" axis="0 1 0" limited="true" range="-0.04 0.04" />
 
                                                 <geom name="ee_right_visual" type="mesh" mesh="zimmer_gripper_right_new" material="ur5_mat" contype="0" conaffinity="0" group="1"/>
 
-                                                <geom name="ee_right_col" type="box" size="0.05 0.004 0.015" pos="-0.005 -0.010 -0.17" 
-                                                    rgba="0 1 0 0.25" group="0"  friction="10 0.05 0.01" solref="0.004 1" solimp="0.9 0.95 0.001" condim="4" priority="100"/>
+                                                <geom name="ee_right_col" type="box" size="0.05 0.002 0.015" pos="-0.005 -0.010 -0.17" contype="2" conaffinity="1" margin="0.001"
+                                                    rgba="0 1 0 0.25" group="0"  friction="10 0.05 0.01" solref="0.01 1" solimp="0.9 0.95 0.001" condim="4" priority="100"/>
 
                                                 <site name="pinch_R" pos="-0.005 -0.010 -0.170" size="0.002" type="sphere" rgba="0 1 1 1"/>
 
@@ -264,24 +264,38 @@
                 contype="1" conaffinity="1"
                 condim="4" friction="2 0.01 0.001"/>
 
-            <!-- Rails -->
-            <geom name="rail_posY" type="box" size="0.05 0.005 0.02" pos="0 0.075 0"
-                    rgba="1 0 0 0" contype="1" conaffinity="1" condim="4" friction="2 0.01 0.001"/>
-            <geom name="rail_negY" type="box" size="0.05 0.005 0.02" pos="0 -0.075 0"
-                    rgba="1 0 0 0" contype="1" conaffinity="1" condim="4" friction="2 0.01 0.001"/>
+            <!-- Rails positioned around battery slot -->
+        <geom name="rail_posY" type="box"
+            size="0.05 0.005 0.03"
+            pos="0.0 0.05125 0.0225"
+            rgba="1 0 0 0" margin="0.001"
+            contype="1" conaffinity="1" condim="4" friction="2 0.01 0.001"/>
 
-            <!-- Side walls -->
-            <geom name="wall_posX" type="box" size="0.005 0.07 0.02" pos="0.055 0 0"
-                    rgba="1 0 0 0" contype="1" conaffinity="1" condim="4" friction="2 0.01 0.001"/>
-            <geom name="wall_negX" type="box" size="0.005 0.07 0.02" pos="-0.055 0 0"
-                    rgba="1 0 0 0" contype="1" conaffinity="1" condim="4" friction="2 0.01 0.001"/>
+        <geom name="rail_negY" type="box"
+            size="0.05 0.005 0.03"
+            pos="0.0 -0.04325 0.0225"
+            rgba="1 0 0 0" margin="0.001"
+            contype="1" conaffinity="1" condim="4" friction="2 0.01 0.001"/>
+
+        <!-- Side walls positioned around battery slot -->
+        <geom name="wall_posX" type="box"
+            size="0.005 0.07 0.03"
+            pos="-0.01275 0.0 0.0225"
+            rgba="1 0 0 0" margin="0.001"
+            contype="1" conaffinity="1" condim="4" friction="2 0.01 0.001"/>
+
+        <geom name="wall_negX" type="box"
+            size="0.005 0.07 0.03"
+            pos="-0.03925 0.0 0.0225"
+            rgba="1 0 0 0" margin="0.001"
+            contype="1" conaffinity="1" condim="4" friction="2 0.01 0.001"/>
             
         </body>
 
         <body name="battery" pos="0.696 0.224 0.9795" euler="0 0 1.57"> <freejoint/>
                 <geom type="mesh" mesh="battery_mesh" material="battery_mat" contype="0" conaffinity="0" group="1" mass="0.0"/>  
                 <geom type="box" size="0.00725 0.04125 0.0255" condim="4" friction="2 0.005 0.0001" rgba="0 0 0 0"
-                    solimp="0.9 0.95 0.001" solref="0.02 1" margin="0" contype="1" conaffinity="1"/> 
+                    solimp="0.9 0.95 0.001" solref="0.02 1" margin="0.001" contype="1" conaffinity="3"/> 
         </body>
         
     </worldbody>
@@ -298,8 +312,8 @@
         <position name='wrist_3' ctrllimited="true" ctrlrange="-6.28318 6.28318" joint='wrist_3_joint' kp="500" kv="25" forcerange="-28 28"/><!--kp100-->
         
         <!--Gripper-->
-        <position name='ee_gripper_left' ctrllimited="true" ctrlrange="-0.03 0.035" joint='ee_gripper_left_joint' kp="1000" kv="25" forcerange="-100 100"/><!--kp100-->
-        <position name='ee_gripper_right' ctrllimited="true" ctrlrange="-0.035 0.03" joint='ee_gripper_right_joint' kp="1000" kv="25" forcerange="-100 100"/><!--kp100-->
+        <position name='ee_gripper_left' ctrllimited="true" ctrlrange="-0.04 0.04" joint='ee_gripper_left_joint' kp="1000" kv="25" forcerange="-100 100"/><!--kp100-->
+        <position name='ee_gripper_right' ctrllimited="true" ctrlrange="-0.04 0.04" joint='ee_gripper_right_joint' kp="1000" kv="25" forcerange="-100 100"/><!--kp100-->
 
         <adhesion name="magnet_left"  body="ee_gripper_left_link"  ctrlrange="0 1" gain="500" />
         <adhesion name="magnet_right" body="ee_gripper_right_link" ctrlrange="0 1" gain="500" />

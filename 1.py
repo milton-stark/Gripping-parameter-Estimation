@@ -8,7 +8,7 @@ import mujoco.viewer
 # =========================
 # FILES
 # =========================
-XML_PATH = "scene_patched.xml"
+XML_PATH = "scene_new.xml"
 JSON_PATH = "battery_grip_data.json"
 
 # =========================
