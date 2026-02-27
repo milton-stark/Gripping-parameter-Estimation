@@ -595,7 +595,8 @@ def count_finger_battery_contacts(model, data, battery_geom_ids, finger_geom_ids
     cnt = 0
     for i in range(n):
         c = data.contact[i]
-        g1 = int(c.geom1); g2 = int(c.geom2)
+        g1 = int(c.geom1)
+        g2 = int(c.geom2)
         if (g1 in finger_geom_ids and g2 in battery_geom_ids) or (g2 in finger_geom_ids and g1 in battery_geom_ids):
             cnt += 1
     return cnt

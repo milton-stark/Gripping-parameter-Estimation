@@ -60,7 +60,7 @@
         <mesh name="wrist3"         file="wrist3.stl"   />
 
         <mesh name="battery_mesh" file="battery.stl" scale="0.001 0.001 0.001"/>
-        <mesh name="casing_mesh"  file="casing.stl"  scale="0.001 0.001 0.001"/>
+        <mesh name="casing_mesh"  file="casing_new.stl"  scale="0.001 0.001 0.001"/>
 
         <!--Changed-->
         <mesh name="zimmer_gripper_adapter"    file="zimmer_gripper_adapter.stl"     scale = "0.001 0.001 0.001"/>
@@ -203,14 +203,12 @@
                                                 <geom name="ee_left_visual" type="mesh" mesh="zimmer_gripper_left" material="ur5_mat" contype="0" conaffinity="0" group="1"/>
 
                                                 <geom name="ee_left_col" type="box" size="0.05 0.004 0.015" pos="-0.005 0.018 -0.17" 
-                                                    rgba="0 1 0 0.5" group="0"
-                                                    friction="1.0 0.005 0.0001" solimp="0.9 0.95 0.001" solref="0.02 1" margin="0.004"
-                                                    contype="1" conaffinity="1"/> 
+                                                    rgba="0 1 0 0" group="0" friction="10 0.05 0.01" solref="0.004 1" solimp="0.9 0.95 0.001" condim="4" priority="100"/> 
 
-                                                <site name="pinch_L" pos="-0.005  0.018 -0.185" size="0.002" type="sphere" rgba="0 1 1 1"/>
+                                                <site name="pinch_L" pos="-0.005 0.018 -0.185" size="0.002" type="sphere" rgba="0 1 1 1"/>
 
-                                                <geom name="ee_left_pad" type="box" pos="-0.005 0.018 -0.185" size="0.02 0.003 0.015" rgba="1 1 0 0.6" group="3" friction="2.0 0.02 0.002"
-                                                    solref="0.004 1" solimp="0.9 0.95 0.001" condim="3" priority="5"/>
+                                                <geom name="ee_left_pad" type="box" pos="-0.005 0.020 -0.170" size="0.05 0.002 0.015" rgba="1 1 0 0.3" group="3"
+                                                  friction="10 0.05 0.01" solref="0.004 1" solimp="0.9 0.95 0.001" condim="4" margin="0" priority="100"/>
                                             </body> 
 
                                             <body name="ee_gripper_right_link" pos="-0.0005 0 0" quat="1 0 0 0">
@@ -221,19 +219,16 @@
                                                 <geom name="ee_right_visual" type="mesh" mesh="zimmer_gripper_right_new" material="ur5_mat" contype="0" conaffinity="0" group="1"/>
 
                                                 <geom name="ee_right_col" type="box" size="0.05 0.004 0.015" pos="-0.005 -0.010 -0.17" 
-                                                    rgba="0 1 0 0.5" group="0"
-                                                    friction="1.0 0.005 0.0001" solimp="0.9 0.95 0.001" solref="0.02 1" margin="0.004"
-                                                    contype="1" conaffinity="1"/>
+                                                    rgba="0 1 0 0" group="0"  friction="10 0.05 0.01" solref="0.004 1" solimp="0.9 0.95 0.001" condim="4" priority="100"/>
 
-                                                <site name="pinch_R" pos="-0.005 -0.01 -0.185" size="0.002" type="sphere" rgba="0 1 1 1"/>
+                                                <site name="pinch_R" pos="-0.005 -0.010 -0.185" size="0.002" type="sphere" rgba="0 1 1 1"/>
 
-                                                <geom name="ee_right_pad" type="box" pos="-0.005 -0.01 -0.185" size="0.02 0.003 0.015" rgba="1 1 0 0.6" group="3" friction="2.0 0.02 0.002"
-                                                    solref="0.004 1" solimp="0.9 0.95 0.001" condim="3" priority="5"/>
+                                                <geom name="ee_right_pad" type="box" pos="-0.005 -0.011 -0.170" size="0.05 0.002 0.015" rgba="1 1 0 0.3" group="3" 
+                                                   friction="10 0.05 0.01" solref="0.004 1" solimp="0.9 0.95 0.001" condim="4" margin="0" priority="100"/>
                                             </body>
 
                                             <body name="tcp" pos="-0.005 0.004 -0.185" quat="1 0 0 0">
                                                 <geom name="tcp_visual" type="sphere" size="0.002" rgba="1 0 0 1" contype="0" conaffinity="0"/>
-                                                
                                             </body>
 
                                             <site name="tcp_tip" pos="-0.005 0.004 -0.185" type="sphere" size="0.001" rgba="1 0.5 0 1"/>
@@ -248,25 +243,45 @@
             </body>
         </body>
 
-        
+        <body name="casing" pos="0.7 0.25 0.957" euler="0 0 1.57">
+            <!-- keep mesh visual only -->
+            <geom type="mesh" mesh="casing_mesh" material="casing_mat"
+                contype="0" conaffinity="0" group="1"/>
 
-        <body name="casing" pos="0.7 0.25 0.965" euler="0 0 1.57">
-            <geom type="mesh" mesh="casing_mesh" material="casing_mat" contype="0" conaffinity="0" group="1"/>
+            <!-- Support ledge at the groove height -->
+            <geom name="battery_support"
+                type="box"
+                pos="0 0 -0.0060"
+                size="0.05 0.07 0.003"
+                rgba="1 0 0 0"
+                contype="1" conaffinity="1"
+                condim="4" friction="2 0.01 0.001"/>
 
-            <geom type="box" size="0.05 0.07 0.002" pos="0 0 -0.02" rgba="1 0 0 0" /> 
-    
-            <geom type="box" size="0.05 0.005 0.02" pos="0 0.075 0" rgba="1 0 0 0"/> 
-            <geom type="box" size="0.05 0.005 0.02" pos="0 -0.075 0" rgba="1 0 0 0"/> 
-    
-            <geom type="box" size="0.005 0.07 0.02" pos="0.055 0 0" rgba="1 0 0 0"/> 
-            <geom type="box" size="0.005 0.07 0.02" pos="-0.055 0 0" rgba="1 0 0 0"/>
+            <!-- FLOOR (make it thick enough to catch the battery) -->
+            <geom name="casing_floor" type="box"
+                size="0.05 0.07 0.01" pos="0 0 -0.02"
+                rgba="1 0 0 0"
+                contype="1" conaffinity="1"
+                condim="4" friction="2 0.01 0.001"/>
 
+            <!-- Rails -->
+            <geom name="rail_posY" type="box" size="0.05 0.005 0.02" pos="0 0.075 0"
+                    rgba="1 0 0 0" contype="1" conaffinity="1" condim="4" friction="2 0.01 0.001"/>
+            <geom name="rail_negY" type="box" size="0.05 0.005 0.02" pos="0 -0.075 0"
+                    rgba="1 0 0 0" contype="1" conaffinity="1" condim="4" friction="2 0.01 0.001"/>
+
+            <!-- Side walls -->
+            <geom name="wall_posX" type="box" size="0.005 0.07 0.02" pos="0.055 0 0"
+                    rgba="1 0 0 0" contype="1" conaffinity="1" condim="4" friction="2 0.01 0.001"/>
+            <geom name="wall_negX" type="box" size="0.005 0.07 0.02" pos="-0.055 0 0"
+                    rgba="1 0 0 0" contype="1" conaffinity="1" condim="4" friction="2 0.01 0.001"/>
+            
         </body>
 
-        <body name="battery" pos="0.696 0.228 0.9855" euler="0 0 1.57"> 
+        <body name="battery" pos="0.696 0.224 0.9795" euler="0 0 1.57"> <freejoint/>
                 <geom type="mesh" mesh="battery_mesh" material="battery_mat" contype="0" conaffinity="0" group="1" mass="0.0"/>  
                 <geom type="box" size="0.00725 0.04125 0.0255" condim="4" friction="2 0.005 0.0001" rgba="0 0 0 0"
-                    solimp="0.9 0.95 0.001" solref="0.02 1" margin="0.001" contype="1" conaffinity="1"/> 
+                    solimp="0.9 0.95 0.001" solref="0.02 1" margin="0" contype="1" conaffinity="1"/> 
         </body>
         
     </worldbody>
@@ -282,13 +297,17 @@
         <position name='wrist_2' ctrllimited="true" ctrlrange="-6.28318 6.28318" joint='wrist_2_joint' kp="500" kv="25" forcerange="-28 28"/><!--kp100-->
         <position name='wrist_3' ctrllimited="true" ctrlrange="-6.28318 6.28318" joint='wrist_3_joint' kp="500" kv="25" forcerange="-28 28"/><!--kp100-->
         
-        <!--Changed-->
-        <position name='ee_gripper_left' ctrllimited="true" ctrlrange="-0.03 0.035" joint='ee_gripper_left_joint' kp="400" kv="20" forcerange="-100 100"/><!--kp100-->
-        <position name='ee_gripper_right' ctrllimited="true" ctrlrange="-0.035 0.03" joint='ee_gripper_right_joint' kp="400" kv="20" forcerange="-100 100"/><!--kp100-->
+        <!--Gripper-->
+        <position name='ee_gripper_left' ctrllimited="true" ctrlrange="-0.03 0.035" joint='ee_gripper_left_joint' kp="1000" kv="25" forcerange="-100 100"/><!--kp100-->
+        <position name='ee_gripper_right' ctrllimited="true" ctrlrange="-0.035 0.03" joint='ee_gripper_right_joint' kp="1000" kv="25" forcerange="-100 100"/><!--kp100-->
 
-        <adhesion name="magnet_left"  body="ee_gripper_left_link"  ctrlrange="0 1" gain="1000" />
-        <adhesion name="magnet_right" body="ee_gripper_right_link" ctrlrange="0 1" gain="1000" />
+        <adhesion name="magnet_left"  body="ee_gripper_left_link"  ctrlrange="0 1" gain="500" />
+        <adhesion name="magnet_right" body="ee_gripper_right_link" ctrlrange="0 1" gain="500" />
     </actuator>
+
+    <equality>
+        <weld name="grip_weld" body1="ee_link" body2="battery" active="false"/>
+    </equality>
 
 
 </mujoco>
