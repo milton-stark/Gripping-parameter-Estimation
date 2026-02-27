@@ -5,9 +5,6 @@ import numpy as np
 import mujoco
 import mujoco.viewer
 
-# =========================
-# FILES
-# =========================
 XML_PATH = "scene_new.xml"
 JSON_PATH = "battery_grip_data.json"
 
