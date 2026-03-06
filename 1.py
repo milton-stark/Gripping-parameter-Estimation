@@ -49,7 +49,7 @@ IK_STEP = 0.55
 # =========================
 BATTERY_HALF_WIDTH = 0.00725
 BATTERY_DIAMETER = 2.0 * BATTERY_HALF_WIDTH
-MAX_GRIPPER_OPENING = BATTERY_DIAMETER + 0.003      # meters
+MAX_GRIPPER_OPENING = BATTERY_DIAMETER + 0.001      # meters
 MAX_FINGER_OPEN_CMD = MAX_GRIPPER_OPENING / 2.0     # meters (per finger)
 
 # Gripper open commands (actuator ctrl)
