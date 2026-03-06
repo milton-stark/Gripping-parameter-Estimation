@@ -27,9 +27,6 @@ T_TO_POST = 2.5
 DT_SLEEP = 0.004
 SUBSTEPS = 4
 
-# Table safety
-TABLE_CLEARANCE = 0.000  # meters; 0 disables
-
 # Gate tolerances
 POS_TOL_PRE  = 0.0010    # 1.0 mm
 POS_TOL_GRIP = 0.0005    # 0.5 mm
