@@ -1,3 +1,5 @@
+from pydoc import doc
+
 import FreeCAD as App
 import FreeCADGui as Gui
 import Part
@@ -16,6 +18,8 @@ G = 9.80665
 PRE_GRIP_OFFSET_MM = 20.0   # mm above the top surface (world ZMax)
 POST_CLEARANCE_MM = 15.0
 RELEASE_HEIGHT_MM = 25.0
+
+OPENING_CLEARANCE_MM = 1.0
 
 # Grip point near top (battery-in-casing: only a small part is exposed)
 GRIP_ZONE_FROM_TOP_MM = 5.0    # Allowed gripping zone measured downward from the top surface
@@ -128,61 +132,77 @@ def main():
     pre_grip_world_z = z_max + PRE_GRIP_OFFSET_MM
     pre_z_relative = pre_grip_world_z - com.z
 
-    # Post-Grip: SAME AS PRE-GRIP (as requested)
+    # Post-Grip:
     post_z_relative = pre_z_relative  # Post-grip = same as pre-grip
+    
+    # --- GRIP WIDTH / GRIPPER OPENING ---
+    # For the current top-grasp strategy, use the smaller horizontal bounding-box dimension
+    grasp_width_mm = min(bb.XLength, bb.YLength)
+
+    # Total gripper opening = object width + clearance
+    gripper_open_width_mm = grasp_width_mm + OPENING_CLEARANCE_MM
+
+    # Symmetric parallel-jaw gripper -> each finger moves half
+    finger_open_per_side_mm = gripper_open_width_mm / 2.0
 
     # Mass & Force
     volume_m3 = abs(volume_mm3) * 1e-9
     mass = volume_m3 * DENSITY_KG_PER_M3
     f_per_jaw = (mass * G * SAFETY) / (2 * MU)
 
-    # --- JSON DATA ---
-    data = {
-        "object_id": f"{obj.Label}_grip_COM",
-        "relative_to_tcp": vec(com),
-        "source": "freecad_grip_macro_COM_weighted",
-        "units": "mm, N",
-        "geometry": {
-            "bounding_box_mm": [r(bb.XLength), r(bb.YLength), r(bb.ZLength)],
-            "center_mm": [0.0, 0.0, 0.0],
-            "principal_axis_world": {
-                "axis_dir_unit": [0.0, 0.0, 1.0]
-            }
-        },
-        "grasp_parameters": {
-            "grip_point_mm": vec(grip_rel),
-            "pre_grip_mm": [0.0, 0.0, r(pre_z_relative)],
-            "post_grip_mm": [0.0, 0.0, r(post_z_relative)],
-            "release_height_mm": RELEASE_HEIGHT_MM
-        },
-        "force_estimation": {
-            "mass_kg": r(mass),
-            "friction_coefficient": MU,
-            "safety_factor": SAFETY,
-            "normal_force_per_jaw_N": r(f_per_jaw),
-            "total_normal_force_both_jaws_N": r(2 * f_per_jaw)
-        },
-        "post_grip_logic": {
-            "zmax_of_object": r(z_max),
-            "pre_grip_offset_mm": PRE_GRIP_OFFSET_MM,
-            "post_clearance_mm": POST_CLEARANCE_MM,
-            "final_post_z_mm": r(pre_grip_world_z)  # post == pre
+# --- JSON DATA ---
+data = {
+    "object_id": f"{obj.Label}_grip_COM",
+    "relative_to_tcp": vec(com),
+    "source": "freecad_grip_macro_COM_weighted",
+    "units": "mm, N",
+    "geometry": {
+        "bounding_box_mm": [r(bb.XLength), r(bb.YLength), r(bb.ZLength)],
+        "center_mm": [0.0, 0.0, 0.0],
+        "principal_axis_world": {
+            "axis_dir_unit": [0.0, 0.0, 1.0]
         }
+    },
+    "grasp_parameters": {
+        "grip_point_mm": vec(grip_rel),
+        "pre_grip_mm": [0.0, 0.0, r(pre_z_relative)],
+        "post_grip_mm": [0.0, 0.0, r(post_z_relative)],
+        "release_height_mm": RELEASE_HEIGHT_MM
+    },
+    "force_estimation": {
+        "mass_kg": r(mass),
+        "friction_coefficient": MU,
+        "safety_factor": SAFETY,
+        "normal_force_per_jaw_N": r(f_per_jaw),
+        "total_normal_force_both_jaws_N": r(2 * f_per_jaw)
+    },
+    "gripper_opening": {
+        "grasp_width_mm": r(grasp_width_mm),
+        "opening_clearance_mm": OPENING_CLEARANCE_MM,
+        "total_open_width_mm": r(gripper_open_width_mm),
+        "finger_open_per_side_mm": r(finger_open_per_side_mm)
+    },
+    "post_grip_logic": {
+        "zmax_of_object": r(z_max),
+        "pre_grip_offset_mm": PRE_GRIP_OFFSET_MM,
+        "post_clearance_mm": POST_CLEARANCE_MM,
+        "final_post_z_mm": r(pre_grip_world_z)
     }
+}
 
-    # --- SAVE ---
-    with open(file_path, "w") as f:
+# --- SAVE ---
+with open(file_path, "w") as f:
         json.dump(data, f, indent=4)
 
     # --- VISUALIZATION ---
-    make_sphere("GRIP_POINT", grip_world, (1.0, 0.0, 0.0))  # Red
-    make_sphere("PRE_GRIP", App.Vector(com.x, com.y, pre_grip_world_z), (0.2, 0.4, 1.0))  # Blue
-    make_sphere("POST_GRIP", App.Vector(com.x, com.y, pre_grip_world_z), (0.2, 0.8, 0.2))  # Green (same as pre)
-    make_axis_line("MOTION_AXIS_Z", com, App.Vector(0, 0, 1))
+make_sphere("GRIP_POINT", grip_world, (1.0, 0.0, 0.0))  # Red
+make_sphere("PRE_GRIP", App.Vector(com.x, com.y, pre_grip_world_z), (0.2, 0.4, 1.0))  # Blue
+make_sphere("POST_GRIP", App.Vector(com.x, com.y, pre_grip_world_z), (0.2, 0.8, 0.2))  # Green (same as pre)
+make_axis_line("MOTION_AXIS_Z", com, App.Vector(0, 0, 1))
 
-    doc.recompute()
-    App.Console.PrintMessage(f"Exported to: {file_path}\n")
-    App.Console.PrintMessage(f"Pre/Post-Grip set to {PRE_GRIP_OFFSET_MM}mm above Z-Max ({r(z_max)})\n")
+doc.recompute()
+App.Console.PrintMessage(f"Exported to: {file_path}\n")
+App.Console.PrintMessage(f"Pre/Post-Grip set to {PRE_GRIP_OFFSET_MM}mm above Z-Max ({r(z_max)})\n")
 
 if __name__ == "__main__":
     main()
