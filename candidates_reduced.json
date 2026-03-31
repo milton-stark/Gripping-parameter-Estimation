@@ -1,0 +1,422 @@
+{
+    "object_id": "battery_grip_candidates",
+    "relative_to_tcp": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "source": "freecad_grip_macro_iterative_auto_candidates",
+    "units": "mm, N",
+    "geometry": {
+        "bounding_box_mm": [
+            14.499348,
+            82.498596,
+            51.0
+        ],
+        "center_mm": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "principal_axis_world": {
+            "axis_dir_unit": [
+                0.0,
+                0.0,
+                1.0
+            ]
+        }
+    },
+    "iteration_logic": {
+        "zmax_of_object_mm": 25.5,
+        "zmin_of_object_mm": -25.5,
+        "bottom_limit_from_top_ratio": 0.2,
+        "bottom_limit_from_top_mm": 10.0,
+        "num_grip_levels": 5,
+        "pre_offset_factors": [
+            0.2,
+            0.3,
+            0.4
+        ],
+        "pre_grip_offsets_mm": [
+            10.2,
+            15.3,
+            20.4
+        ],
+        "clearance_factors": [
+            0.03
+        ],
+        "clearance_values_mm": [
+            0.43498
+        ],
+        "post_grip_rule": "post_grip = pre_grip"
+    },
+    "force_estimation": {
+        "mass_kg": 0.109094,
+        "friction_coefficient": 0.5,
+        "safety_factor": 2.0,
+        "normal_force_per_jaw_N": 2.139686,
+        "total_normal_force_both_jaws_N": 4.279371
+    },
+    "candidates": [
+        {
+            "candidate_id": 1,
+            "grip_depth_below_top_mm": 0.0,
+            "grip_point_mm": [
+                0.0,
+                0.0,
+                25.5
+            ],
+            "pre_grip_mm": [
+                0.0,
+                0.0,
+                35.7
+            ],
+            "post_grip_mm": [
+                0.0,
+                0.0,
+                35.7
+            ],
+            "clearance_mm": 0.43498,
+            "estimated_object_width_mm": 14.499348,
+            "gripper_open_width_mm": 15.369308,
+            "pre_grip_offset_mm": 10.2,
+            "release_height_mm": 20.0
+        },
+        {
+            "candidate_id": 2,
+            "grip_depth_below_top_mm": 0.0,
+            "grip_point_mm": [
+                0.0,
+                0.0,
+                25.5
+            ],
+            "pre_grip_mm": [
+                0.0,
+                0.0,
+                40.8
+            ],
+            "post_grip_mm": [
+                0.0,
+                0.0,
+                40.8
+            ],
+            "clearance_mm": 0.43498,
+            "estimated_object_width_mm": 14.499348,
+            "gripper_open_width_mm": 15.369308,
+            "pre_grip_offset_mm": 15.3,
+            "release_height_mm": 20.0
+        },
+        {
+            "candidate_id": 3,
+            "grip_depth_below_top_mm": 0.0,
+            "grip_point_mm": [
+                0.0,
+                0.0,
+                25.5
+            ],
+            "pre_grip_mm": [
+                0.0,
+                0.0,
+                45.9
+            ],
+            "post_grip_mm": [
+                0.0,
+                0.0,
+                45.9
+            ],
+            "clearance_mm": 0.43498,
+            "estimated_object_width_mm": 14.499348,
+            "gripper_open_width_mm": 15.369308,
+            "pre_grip_offset_mm": 20.4,
+            "release_height_mm": 20.0
+        },
+        {
+            "candidate_id": 4,
+            "grip_depth_below_top_mm": 2.5,
+            "grip_point_mm": [
+                0.0,
+                0.0,
+                23.0
+            ],
+            "pre_grip_mm": [
+                0.0,
+                0.0,
+                35.7
+            ],
+            "post_grip_mm": [
+                0.0,
+                0.0,
+                35.7
+            ],
+            "clearance_mm": 0.43498,
+            "estimated_object_width_mm": 14.499348,
+            "gripper_open_width_mm": 15.369308,
+            "pre_grip_offset_mm": 10.2,
+            "release_height_mm": 20.0
+        },
+        {
+            "candidate_id": 5,
+            "grip_depth_below_top_mm": 2.5,
+            "grip_point_mm": [
+                0.0,
+                0.0,
+                23.0
+            ],
+            "pre_grip_mm": [
+                0.0,
+                0.0,
+                40.8
+            ],
+            "post_grip_mm": [
+                0.0,
+                0.0,
+                40.8
+            ],
+            "clearance_mm": 0.43498,
+            "estimated_object_width_mm": 14.499348,
+            "gripper_open_width_mm": 15.369308,
+            "pre_grip_offset_mm": 15.3,
+            "release_height_mm": 20.0
+        },
+        {
+            "candidate_id": 6,
+            "grip_depth_below_top_mm": 2.5,
+            "grip_point_mm": [
+                0.0,
+                0.0,
+                23.0
+            ],
+            "pre_grip_mm": [
+                0.0,
+                0.0,
+                45.9
+            ],
+            "post_grip_mm": [
+                0.0,
+                0.0,
+                45.9
+            ],
+            "clearance_mm": 0.43498,
+            "estimated_object_width_mm": 14.499348,
+            "gripper_open_width_mm": 15.369308,
+            "pre_grip_offset_mm": 20.4,
+            "release_height_mm": 20.0
+        },
+        {
+            "candidate_id": 7,
+            "grip_depth_below_top_mm": 5.0,
+            "grip_point_mm": [
+                0.0,
+                0.0,
+                20.5
+            ],
+            "pre_grip_mm": [
+                0.0,
+                0.0,
+                35.7
+            ],
+            "post_grip_mm": [
+                0.0,
+                0.0,
+                35.7
+            ],
+            "clearance_mm": 0.43498,
+            "estimated_object_width_mm": 14.499348,
+            "gripper_open_width_mm": 15.369308,
+            "pre_grip_offset_mm": 10.2,
+            "release_height_mm": 20.0
+        },
+        {
+            "candidate_id": 8,
+            "grip_depth_below_top_mm": 5.0,
+            "grip_point_mm": [
+                0.0,
+                0.0,
+                20.5
+            ],
+            "pre_grip_mm": [
+                0.0,
+                0.0,
+                40.8
+            ],
+            "post_grip_mm": [
+                0.0,
+                0.0,
+                40.8
+            ],
+            "clearance_mm": 0.43498,
+            "estimated_object_width_mm": 14.499348,
+            "gripper_open_width_mm": 15.369308,
+            "pre_grip_offset_mm": 15.3,
+            "release_height_mm": 20.0
+        },
+        {
+            "candidate_id": 9,
+            "grip_depth_below_top_mm": 5.0,
+            "grip_point_mm": [
+                0.0,
+                0.0,
+                20.5
+            ],
+            "pre_grip_mm": [
+                0.0,
+                0.0,
+                45.9
+            ],
+            "post_grip_mm": [
+                0.0,
+                0.0,
+                45.9
+            ],
+            "clearance_mm": 0.43498,
+            "estimated_object_width_mm": 14.499348,
+            "gripper_open_width_mm": 15.369308,
+            "pre_grip_offset_mm": 20.4,
+            "release_height_mm": 20.0
+        },
+        {
+            "candidate_id": 10,
+            "grip_depth_below_top_mm": 7.5,
+            "grip_point_mm": [
+                0.0,
+                0.0,
+                18.0
+            ],
+            "pre_grip_mm": [
+                0.0,
+                0.0,
+                35.7
+            ],
+            "post_grip_mm": [
+                0.0,
+                0.0,
+                35.7
+            ],
+            "clearance_mm": 0.43498,
+            "estimated_object_width_mm": 14.499348,
+            "gripper_open_width_mm": 15.369308,
+            "pre_grip_offset_mm": 10.2,
+            "release_height_mm": 20.0
+        },
+        {
+            "candidate_id": 11,
+            "grip_depth_below_top_mm": 7.5,
+            "grip_point_mm": [
+                0.0,
+                0.0,
+                18.0
+            ],
+            "pre_grip_mm": [
+                0.0,
+                0.0,
+                40.8
+            ],
+            "post_grip_mm": [
+                0.0,
+                0.0,
+                40.8
+            ],
+            "clearance_mm": 0.43498,
+            "estimated_object_width_mm": 14.499348,
+            "gripper_open_width_mm": 15.369308,
+            "pre_grip_offset_mm": 15.3,
+            "release_height_mm": 20.0
+        },
+        {
+            "candidate_id": 12,
+            "grip_depth_below_top_mm": 7.5,
+            "grip_point_mm": [
+                0.0,
+                0.0,
+                18.0
+            ],
+            "pre_grip_mm": [
+                0.0,
+                0.0,
+                45.9
+            ],
+            "post_grip_mm": [
+                0.0,
+                0.0,
+                45.9
+            ],
+            "clearance_mm": 0.43498,
+            "estimated_object_width_mm": 14.499348,
+            "gripper_open_width_mm": 15.369308,
+            "pre_grip_offset_mm": 20.4,
+            "release_height_mm": 20.0
+        },
+        {
+            "candidate_id": 13,
+            "grip_depth_below_top_mm": 10.0,
+            "grip_point_mm": [
+                0.0,
+                0.0,
+                15.5
+            ],
+            "pre_grip_mm": [
+                0.0,
+                0.0,
+                35.7
+            ],
+            "post_grip_mm": [
+                0.0,
+                0.0,
+                35.7
+            ],
+            "clearance_mm": 0.43498,
+            "estimated_object_width_mm": 14.499348,
+            "gripper_open_width_mm": 15.369308,
+            "pre_grip_offset_mm": 10.2,
+            "release_height_mm": 20.0
+        },
+        {
+            "candidate_id": 14,
+            "grip_depth_below_top_mm": 10.0,
+            "grip_point_mm": [
+                0.0,
+                0.0,
+                15.5
+            ],
+            "pre_grip_mm": [
+                0.0,
+                0.0,
+                40.8
+            ],
+            "post_grip_mm": [
+                0.0,
+                0.0,
+                40.8
+            ],
+            "clearance_mm": 0.43498,
+            "estimated_object_width_mm": 14.499348,
+            "gripper_open_width_mm": 15.369308,
+            "pre_grip_offset_mm": 15.3,
+            "release_height_mm": 20.0
+        },
+        {
+            "candidate_id": 15,
+            "grip_depth_below_top_mm": 10.0,
+            "grip_point_mm": [
+                0.0,
+                0.0,
+                15.5
+            ],
+            "pre_grip_mm": [
+                0.0,
+                0.0,
+                45.9
+            ],
+            "post_grip_mm": [
+                0.0,
+                0.0,
+                45.9
+            ],
+            "clearance_mm": 0.43498,
+            "estimated_object_width_mm": 14.499348,
+            "gripper_open_width_mm": 15.369308,
+            "pre_grip_offset_mm": 20.4,
+            "release_height_mm": 20.0
+        }
+    ]
+}
