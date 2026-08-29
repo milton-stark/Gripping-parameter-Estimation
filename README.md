@@ -59,48 +59,36 @@ pip install mujoco numpy
 
 For FreeCAD-based grasp planning, install FreeCAD via your system package manager or download from https://www.freecadweb.org/.
 
-### 2. Run a Single Grasp Simulation
+### Workflow (recommended order)
 
-The `Candidate_Grip_test.py` script simulates a complete grasp sequence on a single object:
+Follow this sequence to generate and validate grasps:
 
-```bash
-python Candidate_Grip_test.py
-```
+1. Generate grasp candidates with the FreeCAD macro (in FreeCAD):
 
-This will:
-1. Load the UR5 robot model and scene
-2. Move the arm to a safe home position
-3. Approach a pre-defined grip point
-4. Close the gripper with configurable squeeze force
-5. Lift the object and hold it
-6. Log contact forces and grip stability metrics
+   - Open your object model in FreeCAD and run a macro from the `macros/` directory (for example `grip_iteration.FCMacro` or `grip_new.FCMacro`).
+   - The macro computes object geometry, candidate grip points, pre/post positions and saves the candidate set to `candidates_reduced.json` (or another JSON you configure).
 
-**Configuration**: Edit the constants at the top of `Candidate_Grip_test.py` to change grip points, timing, friction, and gripper force.
-
-### 3. Batch Evaluate Grasp Candidates
-
-The `iteration.py` script evaluates multiple grasp candidates in sequence:
+2. Run batch evaluation and filtering with `Candidates_iteration.py`:
 
 ```bash
 python Candidates_iteration.py
 ```
 
-This script:
-1. Loads a list of grasp candidates from `candidates_reduced.json`
-2. Runs each grasp through the full simulation
-3. Records contact forces, slip detection, and success/failure
-4. Saves detailed results to `candidate_eval_results.json`
-5. Identifies the best-performing grasp and saves it to `best_candidate_single_grasp.json`
+   - Input: `candidates_reduced.json`
+   - Output: `candidate_eval_results.json` (detailed per-candidate metrics) and `best_candidate_single_grasp.json` (top candidate)
 
-### 4. FreeCAD-Based Grasp Planning (Optional)
+3. Validate and visualize the optimal candidate with `Candidate_Grip_test.py`:
 
-Use FreeCAD macros to automatically generate grasp candidates from CAD models:
+```bash
+python Candidate_Grip_test.py
+```
 
-1. Open your object model in FreeCAD
-2. Run one of the macros in the `macros/` directory (e.g., `grip_iteration.FCMacro`)
-3. The macro computes geometric properties (center of mass, bounding box, principal axes)
-4. Generates candidate grasp points and exports to JSON format
+   - Input: `best_candidate_single_grasp.json` (produced by step 2)
+   - Runs a single full simulation of the winning grasp, logs contact traces, and lets you inspect the behavior interactively or via logs.
 
+**Notes**:
+- `battery_grip_data.json` is legacy/optional and not required for normal operation.
+- Adjust timing, friction, and gripper parameters at the top of `Candidates_iteration.py` and `Candidate_Grip_test.py` to tune behaviour.
 ## Configuration Guide
 
 Key parameters in `Candidate_Grip_test.py` and `Candidates_iteration.py`:
