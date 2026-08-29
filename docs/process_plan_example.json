@@ -1,0 +1,36 @@
+{
+  "process_plan": {
+    "task": "pick_and_lift_battery",
+    "candidate_source": "best_candidate_single_grasp.json",
+    "steps": [
+      {
+        "name": "approach_pre_grip",
+        "target_mm": [0.0, 0.0, 35.7],
+        "speed": "normal"
+      },
+      {
+        "name": "move_to_grip",
+        "target_mm": [0.0, 0.0, 18.0],
+        "speed": "slow"
+      },
+      {
+        "name": "close_gripper",
+        "action": "close",
+        "parameters": {
+          "target_open_width_mm": 15.369308,
+          "ramp_time_s": 0.6
+        }
+      },
+      {
+        "name": "lift_to_post",
+        "target_mm": [0.0, 0.0, 35.7],
+        "speed": "normal"
+      },
+      {
+        "name": "release",
+        "action": "open_gripper",
+        "parameters": {"release_height_mm": 20.0}
+      }
+    ]
+  }
+}
