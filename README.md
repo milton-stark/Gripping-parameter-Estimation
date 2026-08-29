@@ -1,161 +1,110 @@
 # Gripping Parameter Estimation
 
-A MuJoCo-based simulation framework for estimating, evaluating, and optimizing gripping parameters for robotic manipulation. This repository contains tools for simulating a UR5 robotic arm with a parallel gripper, evaluating multiple grasp candidates, and tuning control parameters (friction, stiffness, contact geometry, etc.) for stable and reliable object gripping.
+A compact, MuJoCo-based simulation framework for generating, evaluating, and validating robotic grasp candidates for a UR5 arm with a parallel-jaw gripper. The repo automates candidate generation from CAD, batch simulation-based evaluation, and single-case validation so you can find robust gripping parameters quickly.
 
-## What It Does
+---
 
-This project simulates a **UR5 robotic arm with a parallel-jaw gripper** performing pick-and-place tasks on objects like batteries. The system:
+## Why this is useful
 
-- **Simulates physics-based gripping** using MuJoCo, a fast physics engine
-- **Evaluates grasp candidates** by testing different grip points, approach angles, and parameters
-- **Optimizes gripper control** parameters including friction coefficients, squeeze forces, and timing
-- **Integrates with FreeCAD** for CAD-based grasp planning and visualization
-- **Generates detailed metrics** on grasp success/failure, contact forces, and slip detection
+- Reduce physical testing by validating grasps in simulation.
+- Automate candidate generation from CAD models (FreeCAD macros).
+- Quantify grip stability (contact forces, slip detection) to pick reliable grasps.
+- Tune control parameters (squeeze, timing, friction) and reproduce experiments.
 
-Key capability: given an object CAD model and target grasp points, the system predicts success likelihood and identifies optimal control parameters.
+---
 
-## Features
+## What it does
 
-- **MuJoCo-based physics simulation** with configurable XML model definitions for arm, gripper, and environment
-- **Parallel grasp evaluation** system to test multiple candidate grasps and rank by success metrics
-- **FreeCAD macro integration** for importing CAD models, computing grasp points, and visualizing results
-- **Configurable control parameters**: grip point location, pre-position, post-position, squeeze force, timing, friction, etc.
-- **Contact-based success detection** using MuJoCo contact data to evaluate grip stability
-- **JSON-based data pipelines** for storing grasp candidates, parameters, and evaluation results
-- **Inverse kinematics (IK) solver** for computing arm joint angles to reach desired end-effector positions
+1. Use FreeCAD macros to generate candidate grasps from an object CAD model.
+2. Simulate every candidate in MuJoCo and score success metrics.
+3. Select the best candidate(s) and re-run a focused single-case simulation for verification.
 
-## Repository Layout
+---
 
-```
-├── Candidate_Grip_test.py          # Main gripper control and single-grasp simulation (renamed)
-├── Candidates_iteration.py          # Batch evaluation of multiple grasp candidates (renamed)
-├── FreeCAD macro.py                 # FreeCAD integration for CAD-based grasp planning
-├── UR5.xml                          # MuJoCo robot model (UR5 arm + gripper)
-├── scene.xml / scene_test.xml       # MuJoCo scene definitions with object and table
-├── battery_grip_data.json           # Optional legacy test data (not required)
-├── candidates_reduced.json          # Example set of grasp candidates for evaluation
-├── candidate_eval_results.json      # Evaluation results from batch runs
-├── best_candidate_single_grasp.json # Best-performing grasp parameters
-├── xml_files/                       # Alternative MuJoCo model variants
-├── macros/                          # FreeCAD macro scripts for grasp planning
-├── mesh/                            # 3D mesh files for simulation
-└── textures/                        # Texture files for visualization
-```
+## Quick start
 
-## Requirements
-
-- **Python 3.8+**
-- **MuJoCo** (physics simulation engine)
-- **NumPy** (numerical computation)
-- **FreeCAD** (optional, for CAD-based grasp planning)
-
-## Getting Started
-
-### 1. Install Dependencies
+1. Install dependencies:
 
 ```bash
 pip install mujoco numpy
 ```
 
-For FreeCAD-based grasp planning, install FreeCAD via your system package manager or download from https://www.freecadweb.org/.
+(Install FreeCAD separately if you plan to use the macros.)
 
-### 2. Run a Single Grasp Simulation
+2. Generate candidates (in FreeCAD):
 
-The `Candidate_Grip_test.py` script simulates a complete grasp sequence on a single object:
+- Open your model and run a macro from `macros/` (e.g. `grip_iteration.FCMacro` or `grip_new.FCMacro`).
+- The macro writes a JSON of candidates (default: `candidates_reduced.json`).
 
-```bash
-python Candidate_Grip_test.py
-```
-
-This will:
-1. Load the UR5 robot model and scene
-2. Move the arm to a safe home position
-3. Approach a pre-defined grip point
-4. Close the gripper with configurable squeeze force
-5. Lift the object and hold it
-6. Log contact forces and grip stability metrics
-
-**Configuration**: Edit the constants at the top of `Candidate_Grip_test.py` to change grip points, timing, friction, and gripper force.
-
-### 3. Batch Evaluate Grasp Candidates
-
-The `iteration.py` script evaluates multiple grasp candidates in sequence:
+3. Batch-evaluate candidates:
 
 ```bash
 python Candidates_iteration.py
 ```
 
-This script:
-1. Loads a list of grasp candidates from `candidates_reduced.json`
-2. Runs each grasp through the full simulation
-3. Records contact forces, slip detection, and success/failure
-4. Saves detailed results to `candidate_eval_results.json`
-5. Identifies the best-performing grasp and saves it to `best_candidate_single_grasp.json`
+- Input: `candidates_reduced.json`
+- Outputs: `candidate_eval_results.json` and `best_candidate_single_grasp.json`
 
-### 4. FreeCAD-Based Grasp Planning (Optional)
+4. Validate the top candidate:
 
-Use FreeCAD macros to automatically generate grasp candidates from CAD models:
+```bash
+python Candidate_Grip_test.py
+```
 
-1. Open your object model in FreeCAD
-2. Run one of the macros in the `macros/` directory (e.g., `grip_iteration.FCMacro`)
-3. The macro computes geometric properties (center of mass, bounding box, principal axes)
-4. Generates candidate grasp points and exports to JSON format
+- Uses `best_candidate_single_grasp.json` as input; runs a single simulation and logs contact traces.
 
-## Configuration Guide
+---
 
-Key parameters in `Candidate_Grip_test.py` and `Candidates_iteration.py`:
+## Repository layout (important files)
 
-| Parameter | Description |
-|-----------|-------------|
-| `T_HOME_SETTLE` | Time for arm to reach safe home position (seconds) |
-| `T_TO_PRE` | Time for arm to move to pre-grip position (seconds) |
-| `T_TO_GRIP` | Time for arm to reach final grip point (seconds) |
-| `CLOSE_MAG` | Gripper closing distance per cycle (meters) |
-| `CLOSE_RAMP_TIME` | Duration of squeeze ramp phase (seconds) |
-| `FRICTION_MULT` | Multiplier on friction coefficient for grip stability check |
-| `TARGET_PINCH` | Target gripper opening width (meters) |
-| `GRIPPER_STRENGTH_MULT` | Force multiplier for grip strength |
-| `TABLE_CLEARANCE` | Minimum height above table surface (meters) |
+- `Candidate_Grip_test.py` — single-case simulation and debug runner
+- `Candidates_iteration.py` — batch evaluator and filter; produces best candidate JSON
+- `macros/` — FreeCAD macros to produce candidate JSON files
+- `UR5.xml` — primary MuJoCo robot model used by scripts
+- `candidates_reduced.json` — canonical example input for the batch runner
+- `candidate_eval_results.json` — batch-run output (per-candidate metrics)
+- `best_candidate_single_grasp.json` — top candidate selected by the batch run
+- `mesh/`, `textures/` — visual meshes and textures used by simulations
+- `xml_files/` — optional alternate MuJoCo model variants
 
-## Output Files
+Note: `battery_grip_data.json` is legacy/example data and not required for normal operation (it is kept in `macros/`).
 
-- **`candidate_eval_results.json`**: Detailed results for each grasp candidate including success rate, contact forces, and slip events
-- **`best_candidate_single_grasp.json`**: Best-performing candidate with all parameters and metrics
-- **`MUJOCO_LOG.TXT`**: Detailed timestep-by-timestep log from MuJoCo simulation
+---
+
+## Configuration
+
+Edit top-level constants in `Candidates_iteration.py` and `Candidate_Grip_test.py` to change timing, friction, and gripper parameters. Key parameters:
+
+- `T_HOME_SETTLE`, `T_TO_PRE`, `T_TO_GRIP` — motion timing
+- `CLOSE_MAG`, `CLOSE_RAMP_TIME` — gripper closing behavior
+- `FRICTION_MULT`, `GRIPPER_STRENGTH_MULT` — stability multipliers
+- `TARGET_PINCH` — desired pinch width
+
+---
 
 ## Troubleshooting
 
-**Issue**: MuJoCo license error or missing model files  
-**Solution**: Ensure `UR5.xml` and `scene.xml` are in the same directory as the Python scripts. Set `XML_PATH` correctly.
+- MuJoCo errors: ensure `UR5.xml` and required scene files are accessible; set `XML_PATH` in scripts.
+- Candidate JSON issues: validate against `candidates_reduced.json` format (array of candidate objects with `grip_point`, `pre_grip`, etc.).
+- FreeCAD macros: run macros from within FreeCAD; some require specific workbenches.
 
-**Issue**: Grasp candidate fails to load  
-**Solution**: Verify JSON format matches the expected schema (check `candidates_reduced.json` as the canonical example). Note: `battery_grip_data.json` is an optional legacy test file and is not required for normal operation. Ensure that grip points are within object bounds.
+---
 
-**Issue**: FreeCAD macro not running  
-**Solution**: Ensure FreeCAD is installed and the macro file is in the correct directory. Some macros require specific FreeCAD workbenches (e.g., Part Design).
+## How to contribute
 
-## Contributing
+- Open issues for bugs or feature requests.
+- Send PRs that include tests or reproducible examples. Keep changes small and focused.
 
-Contributions welcome! Please:
-- Report issues via GitHub Issues with detailed simulation parameters and expected vs. actual behavior
-- Submit pull requests for bug fixes or new features (e.g., new gripper models, optimization algorithms)
-- Add comments explaining control logic and parameter tuning rationale
+---
 
-## License
+## Maintainers & support
 
-[Specify your license here, e.g., MIT, Apache 2.0]
+Maintained by milton-stark. For support or questions, open a GitHub Issue on this repository or contact the maintainer via GitHub.
 
-## Contact & Support
-
-**Author**: milton-stark  
-**Repository**: [GitHub link to repository]
-
-For questions or collaboration inquiries:
-- Open a GitHub Issue with your question or feature request
-- Contact the repository owner via GitHub
+---
 
 ## References
 
-- **MuJoCo**: https://github.com/deepmind/mujoco
-- **UR Robotics**: https://www.universal-robots.com/
-- **FreeCAD**: https://www.freecadweb.org/
+- MuJoCo: https://github.com/deepmind/mujoco
+- FreeCAD: https://www.freecadweb.org/
+- Universal Robots (UR5): https://www.universal-robots.com/
