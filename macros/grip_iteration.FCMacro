@@ -1,0 +1,292 @@
+import FreeCAD as App
+import FreeCADGui as Gui
+import Part
+import json
+import os
+from PySide import QtGui
+
+# =========================
+# CONFIGURATION
+# =========================
+DENSITY_KG_PER_M3 = 2700   # Aluminium
+MU = 0.5
+SAFETY = 2.0
+G = 9.80665
+
+# Grip search band below the top surface
+BOTTOM_LIMIT_FROM_TOP_RATIO = 0.20   # search down to 20% of object height
+MIN_BOTTOM_LIMIT_FROM_TOP_MM = 3.0
+MAX_BOTTOM_LIMIT_FROM_TOP_MM = 10.0
+NUM_GRIP_LEVELS = 5
+
+# Automatic pre-grip offsets derived from object height
+PRE_OFFSET_FACTORS = [0.20, 0.30, 0.40]
+MIN_PRE_OFFSET_MM = 10.0
+MAX_PRE_OFFSET_MM = 40.0
+
+# Automatic clearance values derived from object width
+CLEARANCE_FACTORS = [0.03, 0.05, 0.08]
+MIN_CLEARANCE_MM = 0.3
+MAX_CLEARANCE_MM = 2.0
+
+RELEASE_HEIGHT_FACTOR = 0.35
+MIN_RELEASE_HEIGHT_MM = 20.0
+
+SPHERE_RADIUS = 0.5
+AXIS_LENGTH = 50.0
+ROUND = 6
+
+VIS_PREFIX = "GRIP_VIZ_"
+
+# =========================
+# HELPERS
+# =========================
+def r(x):
+    return round(float(x), ROUND)
+
+def vec(v):
+    return [r(v.x), r(v.y), r(v.z)]
+
+def clamp(value, low, high):
+    return max(low, min(value, high))
+
+def linspace(start, stop, count):
+    if count <= 1:
+        return [start]
+    step = (stop - start) / float(count - 1)
+    return [start + i * step for i in range(count)]
+
+def clear_visuals():
+    doc = App.ActiveDocument
+    for o in doc.Objects:
+        if o.Name.startswith(VIS_PREFIX):
+            doc.removeObject(o.Name)
+
+def make_sphere(name, pos, color):
+    doc = App.ActiveDocument
+    s = doc.addObject("Part::Sphere", VIS_PREFIX + name)
+    s.Radius = SPHERE_RADIUS
+    s.Placement.Base = pos
+    s.ViewObject.ShapeColor = color
+    s.ViewObject.Transparency = 30
+    return s
+
+def make_axis_line(name, start, direction, color=(1.0, 1.0, 0.0)):
+    doc = App.ActiveDocument
+    end = start + direction.multiply(AXIS_LENGTH)
+    line = Part.makeLine(start, end)
+    obj = doc.addObject("Part::Feature", VIS_PREFIX + name)
+    obj.Shape = line
+    obj.ViewObject.LineColor = color
+    obj.ViewObject.LineWidth = 2
+    return obj
+
+def get_safe_com(shape):
+    try:
+        return shape.CenterOfMass
+    except Exception:
+        pass
+
+    try:
+        return shape.CenterOfGravity
+    except Exception:
+        pass
+
+    bb = shape.BoundBox
+    return bb.Center
+
+def unique_sorted(values):
+    return sorted(set([r(v) for v in values]))
+
+# =========================
+# MAIN
+# =========================
+def main():
+    doc = App.ActiveDocument
+    if not doc:
+        App.Console.PrintError("No active document.\n")
+        return
+
+    sel = Gui.Selection.getSelection()
+    if not sel:
+        App.Console.PrintError("Please select the Mesh or Object in the tree.\n")
+        return
+
+    obj = sel[0]
+
+    # --- FILE DIALOG ---
+    default_path = os.path.join(os.path.expanduser("~"), f"{obj.Label}_grip_candidates.json")
+    file_path, _ = QtGui.QFileDialog.getSaveFileName(None, "Save JSON", default_path, "JSON (*.json)")
+    if not file_path:
+        return
+
+    if not str(file_path).lower().endswith(".json"):
+        file_path = str(file_path) + ".json"
+
+    clear_visuals()
+
+    # --- GEOMETRY DATA EXTRACTION ---
+    if hasattr(obj, "Mesh"):
+        mesh = obj.Mesh
+        bb = mesh.BoundBox
+        com = bb.Center
+        volume_mm3 = mesh.Volume
+        shape = None
+    elif hasattr(obj, "Shape"):
+        shape = obj.Shape
+        bb = shape.BoundBox
+        com = get_safe_com(shape)
+        volume_mm3 = shape.Volume
+    else:
+        App.Console.PrintError("Object type not supported.\n")
+        return
+
+    # --- BASIC GEOMETRY ---
+    z_max = bb.ZMax
+    z_min = bb.ZMin
+    height = bb.ZLength
+    width = min(bb.XLength, bb.YLength)
+
+    x_c = 0.5 * (bb.XMin + bb.XMax)
+    y_c = 0.5 * (bb.YMin + bb.YMax)
+
+    # --- AUTOMATIC SEARCH LIMIT ---
+    bottom_limit_from_top_mm = clamp(
+        height * BOTTOM_LIMIT_FROM_TOP_RATIO,
+        MIN_BOTTOM_LIMIT_FROM_TOP_MM,
+        MAX_BOTTOM_LIMIT_FROM_TOP_MM
+    )
+
+    grip_depth_values = linspace(0.0, bottom_limit_from_top_mm, NUM_GRIP_LEVELS)
+
+    # --- AUTOMATIC PRE-GRIP OFFSETS ---
+    pre_offset_values = [
+        clamp(height * factor, MIN_PRE_OFFSET_MM, MAX_PRE_OFFSET_MM)
+        for factor in PRE_OFFSET_FACTORS
+    ]
+    pre_offset_values = unique_sorted(pre_offset_values)
+
+    # --- AUTOMATIC CLEARANCE VALUES ---
+    clearance_values = [
+        clamp(width * factor, MIN_CLEARANCE_MM, MAX_CLEARANCE_MM)
+        for factor in CLEARANCE_FACTORS
+    ]
+    clearance_values = unique_sorted(clearance_values)
+
+    # --- AUTOMATIC RELEASE HEIGHT ---
+    release_height_mm = max(MIN_RELEASE_HEIGHT_MM, height * RELEASE_HEIGHT_FACTOR)
+
+    # --- MASS & FORCE ---
+    volume_m3 = abs(volume_mm3) * 1e-9
+    mass = volume_m3 * DENSITY_KG_PER_M3
+    f_per_jaw = (mass * G * SAFETY) / (2 * MU)
+
+    # --- CANDIDATE GENERATION ---
+    candidates = []
+    candidate_id = 1
+
+    nominal_grip_world = None
+    nominal_pre_world = None
+    nominal_post_world = None
+
+    for grip_depth in grip_depth_values:
+        grip_guess = App.Vector(x_c, y_c, z_max - grip_depth)
+
+        grip_world = grip_guess
+        if shape is not None:
+            try:
+                dist, pts, info = shape.distToShape(Part.Vertex(grip_guess))
+                if pts and pts[0] and hasattr(pts[0][0], "x"):
+                    grip_world = pts[0][0]
+            except Exception:
+                grip_world = grip_guess
+
+        grip_rel = grip_world - com
+
+        for pre_offset in pre_offset_values:
+            pre_grip_world_z = z_max + pre_offset
+            pre_world = App.Vector(x_c, y_c, pre_grip_world_z)
+
+            # keep same behavior as your working version
+            post_world = App.Vector(x_c, y_c, pre_grip_world_z)
+
+            pre_rel = pre_world - com
+            post_rel = post_world - com
+
+            for clearance in clearance_values:
+                gripper_open_width = width + 2.0 * clearance
+
+                candidates.append({
+                    "candidate_id": candidate_id,
+                    "grip_depth_below_top_mm": r(grip_depth),
+                    "grip_point_mm": vec(grip_rel),
+                    "pre_grip_mm": vec(pre_rel),
+                    "post_grip_mm": vec(post_rel),
+                    "clearance_mm": r(clearance),
+                    "estimated_object_width_mm": r(width),
+                    "gripper_open_width_mm": r(gripper_open_width),
+                    "pre_grip_offset_mm": r(pre_offset),
+                    "release_height_mm": r(release_height_mm)
+                })
+
+                if candidate_id == 1:
+                    nominal_grip_world = grip_world
+                    nominal_pre_world = pre_world
+                    nominal_post_world = post_world
+
+                candidate_id += 1
+
+    # --- JSON DATA ---
+    data = {
+        "object_id": f"{obj.Label}_grip_candidates",
+        "relative_to_tcp": vec(com),
+        "source": "freecad_grip_macro_iterative_auto_candidates",
+        "units": "mm, N",
+        "geometry": {
+            "bounding_box_mm": [r(bb.XLength), r(bb.YLength), r(bb.ZLength)],
+            "center_mm": [0.0, 0.0, 0.0],
+            "principal_axis_world": {
+                "axis_dir_unit": [0.0, 0.0, 1.0]
+            }
+        },
+        "iteration_logic": {
+            "zmax_of_object_mm": r(z_max),
+            "zmin_of_object_mm": r(z_min),
+            "bottom_limit_from_top_ratio": r(BOTTOM_LIMIT_FROM_TOP_RATIO),
+            "bottom_limit_from_top_mm": r(bottom_limit_from_top_mm),
+            "num_grip_levels": NUM_GRIP_LEVELS,
+            "pre_offset_factors": PRE_OFFSET_FACTORS,
+            "pre_grip_offsets_mm": [r(v) for v in pre_offset_values],
+            "clearance_factors": CLEARANCE_FACTORS,
+            "clearance_values_mm": [r(v) for v in clearance_values],
+            "post_grip_rule": "post_grip = pre_grip"
+        },
+        "force_estimation": {
+            "mass_kg": r(mass),
+            "friction_coefficient": MU,
+            "safety_factor": SAFETY,
+            "normal_force_per_jaw_N": r(f_per_jaw),
+            "total_normal_force_both_jaws_N": r(2 * f_per_jaw)
+        },
+        "candidates": candidates
+    }
+
+    # --- SAVE ---
+    with open(file_path, "w") as f:
+        json.dump(data, f, indent=4)
+
+    # --- VISUALIZATION ---
+    if nominal_grip_world is not None:
+        make_sphere("GRIP_POINT", nominal_grip_world, (1.0, 0.0, 0.0))
+        make_sphere("PRE_GRIP", nominal_pre_world, (0.2, 0.4, 1.0))
+        make_sphere("POST_GRIP", nominal_post_world, (0.2, 0.8, 0.2))
+        make_axis_line("MOTION_AXIS_Z", com, App.Vector(0, 0, 1))
+
+    doc.recompute()
+    App.Console.PrintMessage(f"Exported to: {file_path}\n")
+    App.Console.PrintMessage(f"Generated {len(candidates)} grasp candidates.\n")
+    App.Console.PrintMessage(f"Auto pre-grip offsets: {[r(v) for v in pre_offset_values]}\n")
+    App.Console.PrintMessage(f"Auto clearance values: {[r(v) for v in clearance_values]}\n")
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,39 @@
+{
+  "xml_path": "scene_test.xml",
+  "json_path": "candidates_reduced.json",
+  "selection_rule": "best valid candidate = lowest grip_point_mm[2], tie-break by candidate_id",
+  "num_candidates": 15,
+  "num_valid_candidates": 6,
+  "best_valid_candidate": {
+    "candidate_id": 10,
+    "accepted": true,
+    "reason": "valid",
+    "pre_pos_err": 9.208418947932993e-06,
+    "pre_rot_err": 7.33726239499547e-06,
+    "grip_pos_err": 3.947761357682545e-06,
+    "grip_rot_err": 3.9540603421322425e-06,
+    "left_pad_battery_contacts": 4,
+    "right_pad_battery_contacts": 3,
+    "both_pads_touch_battery": true,
+    "forbidden_collision": false,
+    "forbidden_collision_info": null,
+    "grip_point_mm": [
+      0.0,
+      0.0,
+      18.0
+    ],
+    "pre_grip_mm": [
+      0.0,
+      0.0,
+      35.7
+    ],
+    "post_grip_mm": [
+      0.0,
+      0.0,
+      35.7
+    ],
+    "clearance_mm": 0.43498,
+    "gripper_open_width_mm": 15.369308,
+    "release_height_mm": 20.0
+  }
+}

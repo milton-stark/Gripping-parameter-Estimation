@@ -8,7 +8,7 @@ import mujoco.viewer
 # =========================
 # FILES
 # =========================
-XML_PATH = "scene_new.xml"
+XML_PATH = "UR5.xml"
 JSON_PATH = "battery_grip_data.json"
 
 # =========================
@@ -43,43 +43,44 @@ IK_DAMP = 0.02
 IK_STEP = 0.55
 
 # =========================
-# GRIPPER OPEN LIMIT (battery width + 3mm total)
+# GRIPPER OPEN LIMIT (battery width + 2mm total = 1mm each side)
 # battery collision half-width = 0.00725 -> width = 0.0145
-# max opening = 0.0145 + 0.003 = 0.0175 -> per finger = 0.00875
+# max opening = 0.0145 + 0.002 = 0.0165 -> per finger = 0.00825
 # =========================
+
 BATTERY_HALF_WIDTH = 0.00725
 BATTERY_DIAMETER = 2.0 * BATTERY_HALF_WIDTH
-MAX_GRIPPER_OPENING = BATTERY_DIAMETER + 0.001      # meters
-MAX_FINGER_OPEN_CMD = MAX_GRIPPER_OPENING / 2.0     # meters (per finger)
 
-# Gripper open commands (actuator ctrl)
-OPEN_L_CMD = float(MAX_FINGER_OPEN_CMD)
-OPEN_R_CMD = float(-MAX_FINGER_OPEN_CMD)
 
-# Closing
-CLOSE_MAG = 0.016
+# =========================
+# GRIPPER CLOSING
+# =========================
+
+CLOSE_MAG = 0.010
 CLOSE_RAMP_TIME = 0.6
 CLOSE_HOLD_TIME = 0.8
 POST_CLOSE_HOLD = 0.25
 
-# ===== Grasp robustness tuning =====
-FRICTION_MULT = 3.0       # 2..6
-FRICTION_SLIDE_CAP = 25.0 # clamp slide to avoid solver instability
+# =========================
+# GRIP STABILITY
+# =========================
 
-# --- VISUAL CONTACT CHEAT: close more so pads appear touching ---
-# This is additional closing beyond autocalibrate targets.
-# Increase if you still see a gap; reduce if contacts explode.
-SQUEEZE_EXTRA = 0.014     # tune 0.010..0.018
+FRICTION_MULT = 3.0
+FRICTION_SLIDE_CAP = 25.0
 
-# Optional: close based on pinch distance so it "pulls in" until near a target width.
+# Small squeeze after autocalibration
+SQUEEZE_EXTRA = 0.0015
+
+# Optional pinch-based closing
 USE_PINCH_VISUAL_CLOSE = True
-TARGET_PINCH = 0.0142     # slightly less than battery width 0.0145 (meters)
-PINCH_GAIN = 0.6          # how aggressively to close based on error
-PINCH_MAX_EXTRA = 0.010   # cap additional close from pinch logic
+TARGET_PINCH = 0.0160
+PINCH_GAIN = 0.35
+PINCH_MAX_EXTRA = 0.0015
 
-GRIPPER_STRENGTH_MULT = 2.0  # 1..4
+GRIPPER_STRENGTH_MULT = 2.0
 
-HOLD_AFTER_DONE_SECONDS = 5.0  # keep holding/attaching after pick to prevent end-slip
+# Prevent slip after lift
+HOLD_AFTER_DONE_SECONDS = 5.0
 
 # Actuator names (match your XML)
 ARM_ACT_NAMES = ["shoulder_pan", "shoulder_lift", "forearm", "wrist_1", "wrist_2", "wrist_3"]
@@ -118,9 +119,9 @@ def body_geom_ids(model, body_name: str):
     return list(range(gadr, gadr + gnum))
 
 
-# =========================
+
 # JSON LOADER (your uploaded schema)
-# =========================
+
 def load_battery_params(json_path: str):
     """
     Expected schema:
@@ -139,9 +140,9 @@ def load_battery_params(json_path: str):
     return rel_tcp, pre, grip, post
 
 
-# =========================
+
 # TABLE TOP + CLAMP
-# =========================
+
 def get_table_top_z(model, data):
     candidates = ["table_block", "table_block_2"]
     tops = []
@@ -162,9 +163,9 @@ def clamp_above_table(p, table_top_z):
     return q
 
 
-# =========================
-# DEBUG WORLD
-# =========================
+
+# DEBUG
+
 def dbg_world(model, data):
     sid_tip = site_id(model, "tcp_tip")
     sid_L = site_id(model, "pinch_L")
@@ -250,9 +251,7 @@ def set_finger_collision(model, enable: bool):
         model.geom_conaffinity[gid] = conaff
 
 
-# =========================
-# FRICTION + STRENGTH BOOSTERS (Python-only)
-# =========================
+
 def boost_friction(model, geom_names, mult=3.0, slide_cap=25.0):
     """Multiply geom friction (slide/torsion/roll). Clamp slide to avoid solver instability."""
     for name in geom_names:
@@ -285,9 +284,9 @@ def boost_gripper_strength(model, mult=2.0):
         model.actuator_forcerange[aid, 1] *= mult
 
 
-# =========================
-# ARM IDS (STRICT)
-# =========================
+
+# ARM IDS
+
 def get_arm_actuator_ids_strict(model):
     return [actuator_id(model, n) for n in ARM_ACT_NAMES]
 
@@ -309,19 +308,8 @@ def sync_arm_ctrl_to_qpos(model, data, arm_act_ids):
         data.ctrl[aid] = float(data.qpos[qadr])
 
 
-# =========================
+
 # GRIPPER CONTROL
-# =========================
-def set_gripper_open(model, data):
-    aL = actuator_id(model, "ee_gripper_left")
-    aR = actuator_id(model, "ee_gripper_right")
-
-    # hard clamp open to max allowed
-    maxL = min(MAX_FINGER_OPEN_CMD, float(model.actuator_ctrlrange[aL, 1]))
-    minR = max(-MAX_FINGER_OPEN_CMD, float(model.actuator_ctrlrange[aR, 0]))  # right open is negative
-
-    data.ctrl[aL] = float(np.clip(OPEN_L_CMD, float(model.actuator_ctrlrange[aL, 0]), maxL))
-    data.ctrl[aR] = float(np.clip(OPEN_R_CMD, minR, float(model.actuator_ctrlrange[aR, 1])))
 
 def set_gripper_close_targets(model, data, closeL, closeR):
     aL = actuator_id(model, "ee_gripper_left")
@@ -675,7 +663,7 @@ def run_sequence(model, data, lock):
         mujoco.mj_forward(model, data)
         sync_arm_ctrl_to_qpos(model, data, arm_act_ids)
 
-        set_gripper_open(model, data)
+        
         set_finger_collision(model, enable=False)
 
         # Friction + strength boosts

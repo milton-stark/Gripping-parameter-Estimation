@@ -167,9 +167,9 @@ def has_forbidden_collision(model, data, gripper_body_names, forbidden_body_name
     return False, None
 
 
-# =========================
-# FINGER COLLISION TOGGLE
-# =========================
+# =================
+# FINGER COLLISION 
+# =================
 def set_finger_collision(model, enable: bool):
     contype = 1 if enable else 0
     conaff = 1 if enable else 0
@@ -181,9 +181,6 @@ def set_finger_collision(model, enable: bool):
         model.geom_conaffinity[gid] = conaff
 
 
-# =========================
-# FRICTION + STRENGTH BOOSTERS
-# =========================
 def boost_friction(model, geom_names, mult=3.0, slide_cap=25.0):
     for name in geom_names:
         gid = geom_id(model, name)
@@ -211,9 +208,9 @@ def boost_gripper_strength(model, mult=2.0):
         model.actuator_forcerange[aid, 1] *= mult
 
 
-# =========================
+# ========
 # ARM IDS
-# =========================
+# ========
 def get_arm_actuator_ids_strict(model):
     return [actuator_id(model, n) for n in ARM_ACT_NAMES]
 
@@ -235,9 +232,9 @@ def sync_arm_ctrl_to_qpos(model, data, arm_act_ids):
         data.ctrl[aid] = float(data.qpos[qadr])
 
 
-# =========================
+# ================
 # GRIPPER CONTROL
-# =========================
+# ================
 def set_gripper_close_targets(model, data, closeL, closeR):
     aL = actuator_id(model, "ee_gripper_left")
     aR = actuator_id(model, "ee_gripper_right")
@@ -307,9 +304,7 @@ def autocalibrate_close_targets(model, data):
     return closeL, closeR
 
 
-# =========================
-# DESIRED ORIENTATION
-# =========================
+
 def desired_tcp_R_vertical():
     z = np.array([0.0, 0.0, 1.0])
     y = np.array([0.0, 1.0, 0.0])
@@ -329,9 +324,7 @@ def rotvec_from_R(Rerr):
     return rv
 
 
-# =========================
-# IK + MOTION
-# =========================
+
 def ik_step_pose_qpos(model, data, site_name, target_pos, target_R,
                       arm_joint_ids, damp=IK_DAMP, step=IK_STEP):
     sid = site_id(model, site_name)
@@ -470,9 +463,6 @@ def close_gripper_ramp_hold(model, data, hold_site, hold_pos, hold_R,
             mujoco.mj_step(model, data)
 
 
-# =========================
-# LIVE TARGETS
-# =========================
 def compute_tcp_targets_live(model, data, bid_batt, R_des, rel_tcp, pre_off, grip_off, post_off):
     batt_pos = data.xpos[bid_batt].copy()
     rel_tcp_world = R_des @ rel_tcp
