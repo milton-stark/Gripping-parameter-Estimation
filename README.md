@@ -27,12 +27,12 @@ Key capability: given an object CAD model and target grasp points, the system pr
 ## Repository Layout
 
 ```
-├── Grip.py                          # Main gripper control and single-grasp simulation
-├── iteration.py                     # Batch evaluation of multiple grasp candidates
+├── Candidate_Grip_test.py          # Main gripper control and single-grasp simulation (renamed)
+├── Candidates_iteration.py          # Batch evaluation of multiple grasp candidates (renamed)
 ├── FreeCAD macro.py                 # FreeCAD integration for CAD-based grasp planning
 ├── UR5.xml                          # MuJoCo robot model (UR5 arm + gripper)
 ├── scene.xml / scene_test.xml       # MuJoCo scene definitions with object and table
-├── battery_grip_data.json           # Example grasp parameters and force estimates
+├── battery_grip_data.json           # Optional legacy test data (not required)
 ├── candidates_reduced.json          # Example set of grasp candidates for evaluation
 ├── candidate_eval_results.json      # Evaluation results from batch runs
 ├── best_candidate_single_grasp.json # Best-performing grasp parameters
@@ -61,10 +61,10 @@ For FreeCAD-based grasp planning, install FreeCAD via your system package manage
 
 ### 2. Run a Single Grasp Simulation
 
-The `Grip.py` script simulates a complete grasp sequence on a single object:
+The `Candidate_Grip_test.py` script simulates a complete grasp sequence on a single object:
 
 ```bash
-python Grip.py
+python Candidate_Grip_test.py
 ```
 
 This will:
@@ -75,14 +75,14 @@ This will:
 5. Lift the object and hold it
 6. Log contact forces and grip stability metrics
 
-**Configuration**: Edit the constants at the top of `Grip.py` to change grip points, timing, friction, and gripper force.
+**Configuration**: Edit the constants at the top of `Candidate_Grip_test.py` to change grip points, timing, friction, and gripper force.
 
 ### 3. Batch Evaluate Grasp Candidates
 
 The `iteration.py` script evaluates multiple grasp candidates in sequence:
 
 ```bash
-python iteration.py
+python Candidates_iteration.py
 ```
 
 This script:
@@ -103,7 +103,7 @@ Use FreeCAD macros to automatically generate grasp candidates from CAD models:
 
 ## Configuration Guide
 
-Key parameters in `Grip.py` and `iteration.py`:
+Key parameters in `Candidate_Grip_test.py` and `Candidates_iteration.py`:
 
 | Parameter | Description |
 |-----------|-------------|
@@ -129,7 +129,7 @@ Key parameters in `Grip.py` and `iteration.py`:
 **Solution**: Ensure `UR5.xml` and `scene.xml` are in the same directory as the Python scripts. Set `XML_PATH` correctly.
 
 **Issue**: Grasp candidate fails to load  
-**Solution**: Verify JSON format matches the expected schema (see `battery_grip_data.json` for reference). Check that grip points are within object bounds.
+**Solution**: Verify JSON format matches the expected schema (check `candidates_reduced.json` as the canonical example). Note: `battery_grip_data.json` is an optional legacy test file and is not required for normal operation. Ensure that grip points are within object bounds.
 
 **Issue**: FreeCAD macro not running  
 **Solution**: Ensure FreeCAD is installed and the macro file is in the correct directory. Some macros require specific FreeCAD workbenches (e.g., Part Design).
