@@ -1,3 +1,6 @@
+# Runs simulation for all Grasp candidates_reduced and evaluates their success/failure and stores the evaluation results in candidate_eval_results.json.
+# And saves the best candidate in best_candidate_single_grasp.json.
+
 import time
 import json
 import numpy as np

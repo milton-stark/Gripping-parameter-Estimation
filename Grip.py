@@ -1,3 +1,4 @@
+# Simulates and check the best candidate grasp from the JSON file. This is a single-run script for testing/debugging.
 import time
 import json
 import threading
@@ -9,7 +10,7 @@ import mujoco.viewer
 # FILES
 # =========================
 XML_PATH = "UR5.xml"
-JSON_PATH = "battery_grip_data.json"
+JSON_PATH = "best_candidate_single_grasp.json"
 
 # =========================
 # USER SETTINGS
