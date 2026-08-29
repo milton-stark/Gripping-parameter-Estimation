@@ -33,8 +33,8 @@ graph LR
 
 | File / folder | Role |
 |---|---|
-| `macros/` | FreeCAD macros (`grip_iteration.FCMacro`, `grip_new.FCMacro`) that turn a CAD model into candidate grasps. Run from inside FreeCAD, not the terminal. |
-| `candidates_reduced.json` | The candidate list produced by the macros — input to the batch run. Also serves as the reference for the expected format. |
+| `FreeCAD macro_candidates.FCMacro` | FreeCAD macro that turn a CAD model into grasp candidates. Run from inside FreeCAD, not the terminal. |
+| `candidates_reduced.json` | The candidate list produced by the macro — input to the batch run. Also serves as the reference for the expected format. |
 | `Candidates_iteration.py` | Batch evaluator. Simulates every candidate, scores stability, filters, and picks the best. The main script of the project. |
 | `candidate_eval_results.json` | Per-candidate metrics from the batch run. The evaluation plots in the thesis come from this file. |
 | `best_candidate_single_grasp.json` | The single top candidate, in the same format as the input list. |
@@ -44,7 +44,6 @@ graph LR
 | `mesh/`, `textures/` | Collision and visual assets referenced by the MuJoCo models. |
 | `CAD/` | Source CAD models (`battery.stl`, `casing_new.stl`) that the macros work from. |
 | `Report/` | Thesis PDF and presentation. |
-| `macros/battery_grip_data.json` | Legacy example data. Not used by the current pipeline. |
 
 ## Running it
 
