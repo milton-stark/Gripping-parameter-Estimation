@@ -4,135 +4,89 @@ A compact, MuJoCo-based simulation framework for generating, evaluating, and val
 
 ---
 
-## Why this is useful
+# Gripping Parameter Estimation
 
-- Reduce physical testing by validating grasps in simulation.
-- Automate candidate generation from CAD models (FreeCAD macros).
-- Quantify grip stability (contact forces, slip detection) to pick reliable grasps.
-- Tune control parameters (squeeze, timing, friction) and reproduce experiments.
+Simulation framework for finding reliable grasp parameters for a UR5 with a parallel-jaw gripper. Grasp candidates are generated from a CAD model, scored in bulk in MuJoCo, and the best one is re-run on its own for verification — so grip points and forces are settled before anything is tried on hardware.
 
----
-
-## What it does
-
-1. Use FreeCAD macros to generate candidate grasps from an object CAD model.
-2. Simulate every candidate in MuJoCo and score success metrics.
-3. Select the best candidate(s) and re-run a focused single-case simulation for verification.
+Master's thesis, M.Sc. Mechatronics, University of Siegen (Chair of Interconnected Automation Systems) in cooperation with Fraunhofer IGCV, Augsburg.
 
 ---
 
-## Quick start
+## How it works
 
-1. Install dependencies:
+The project runs as three stages, each handing a JSON file to the next.
+
+**1 — Generate candidates (FreeCAD).** A macro from `macros/` reads the object's CAD model and writes out a set of candidate grasps: for each one, where the gripper approaches from (`pre_grip`) and where it closes (`grip_point`). Output: `candidates_reduced.json`.
+
+**2 — Score them all (MuJoCo).** `Candidates_iteration.py` loads that file and simulates every candidate in turn against the `UR5.xml` scene: approach, close, lift, and measure. Each candidate gets contact-force and slip metrics. Everything scored lands in `candidate_eval_results.json`; the winner is written separately to `best_candidate_single_grasp.json`.
+
+**3 — Verify the winner.** `Candidate_Grip_test.py` re-runs that single grasp on its own, with the viewer available and full contact traces logged. This is where you watch the grip and confirm the batch score wasn't an artefact.
+
+```mermaid
+graph LR
+  CAD["CAD/ — 3D models"] --> M["macros/*.FCMacro<br/>FreeCAD"]
+  M --> C["candidates_reduced.json"]
+  C --> B["Candidates_iteration.py<br/>batch simulate and score"]
+  B --> R["candidate_eval_results.json<br/>per-candidate metrics"]
+  B --> BC["best_candidate_single_grasp.json"]
+  BC --> V["Candidate_Grip_test.py<br/>single-case verification"]
+  V --> L["Viewer + contact logs"]
+  B -.uses.-> X["UR5.xml, mesh/, textures/"]
+  V -.uses.-> X
+```
+
+## Files
+
+| File / folder | Role |
+|---|---|
+| `macros/` | FreeCAD macros (`grip_iteration.FCMacro`, `grip_new.FCMacro`) that turn a CAD model into candidate grasps. Run from inside FreeCAD, not the terminal. |
+| `candidates_reduced.json` | The candidate list produced by the macros — input to the batch run. Also serves as the reference for the expected format. |
+| `Candidates_iteration.py` | Batch evaluator. Simulates every candidate, scores stability, filters, and picks the best. The main script of the project. |
+| `candidate_eval_results.json` | Per-candidate metrics from the batch run. The evaluation plots in the thesis come from this file. |
+| `best_candidate_single_grasp.json` | The single top candidate, in the same format as the input list. |
+| `Candidate_Grip_test.py` | Single-case runner. Loads the best candidate, simulates it with the viewer and detailed logging. Used for debugging and for the final visual check. |
+| `UR5.xml` | The MuJoCo scene: UR5 arm, parallel-jaw gripper, object, and ground. Both scripts load this. |
+| `xml_files/` | Alternative scene variants — different objects or gripper settings. Point `XML_PATH` at one of these to swap scenes. |
+| `mesh/`, `textures/` | Collision and visual assets referenced by the MuJoCo models. |
+| `CAD/` | Source CAD models (`battery.stl`, `casing_new.stl`) that the macros work from. |
+| `Report/` | Thesis PDF and presentation. |
+| `macros/battery_grip_data.json` | Legacy example data. Not used by the current pipeline. |
+
+## Running it
 
 ```bash
 pip install mujoco numpy
 ```
 
-(Install FreeCAD separately if you plan to use the macros.)
-
-2. Generate candidates (in FreeCAD):
-
-- Open your model and run a macro from `macros/` (e.g. `grip_iteration.FCMacro` or `grip_new.FCMacro`).
-- The macro writes a JSON of candidates (default: `candidates_reduced.json`).
-
-3. Batch-evaluate candidates:
+FreeCAD is installed separately and is only needed for stage 1.
 
 ```bash
-python Candidates_iteration.py
+python Candidates_iteration.py    # stage 2 — batch evaluation
+python Candidate_Grip_test.py     # stage 3 — verify the winner
 ```
 
-- Input: `candidates_reduced.json`
-- Outputs: `candidate_eval_results.json` and `best_candidate_single_grasp.json`
+Both scripts read paths from constants at the top of the file. If MuJoCo fails to load the scene, check `XML_PATH` points at `UR5.xml` and that `mesh/` and `textures/` are reachable from it.
 
-4. Validate the top candidate:
+## Parameters
 
-```bash
-python Candidate_Grip_test.py
-```
+Both scripts expose their tuning constants at the top:
 
-- Uses `best_candidate_single_grasp.json` as input; runs a single simulation and logs contact traces.
+| Constant | Controls |
+|---|---|
+| `T_HOME_SETTLE`, `T_TO_PRE`, `T_TO_GRIP` | Motion timing between phases |
+| `CLOSE_MAG`, `CLOSE_RAMP_TIME` | How hard and how fast the gripper closes |
+| `TARGET_PINCH` | Commanded jaw width at the grip |
+| `FRICTION_MULT`, `GRIPPER_STRENGTH_MULT` | Scaling on contact friction and actuator strength |
 
----
+Changing these changes what counts as a successful grasp, so keep them consistent between the batch run and the verification run — otherwise the winner won't reproduce.
 
-## Repository layout (important files)
+## Thesis and assets
 
-- `Candidate_Grip_test.py` — single-case simulation and debug runner
-- `Candidates_iteration.py` — batch evaluator and filter; produces best candidate JSON
-- `macros/` — FreeCAD macros to produce candidate JSON files
-- `UR5.xml` — primary MuJoCo robot model used by scripts
-- `candidates_reduced.json` — canonical example input for the batch runner
-- `candidate_eval_results.json` — batch-run output (per-candidate metrics)
-- `best_candidate_single_grasp.json` — top candidate selected by the batch run
-- `mesh/`, `textures/` — visual meshes and textures used by simulations
-- `xml_files/` — optional alternate MuJoCo model variants
+- Thesis: [`Report/Sepasthiyammal,Milton,1702059_Thesis.pdf`](Report/Sepasthiyammal,Milton,1702059_Thesis.pdf)
+- Presentation: [`Report/Thesis Presentation.pptx`](Report/Thesis%20Presentation.pptx)
+- Methodology, experimental results, and the evaluation plots derived from `candidate_eval_results.json` are all in the thesis.
 
-Note: `battery_grip_data.json` is legacy/example data and not required for normal operation (it is kept in `macros/`).
+## Built with
 
----
+[MuJoCo](https://github.com/google-deepmind/mujoco) · [FreeCAD](https://www.freecad.org/) · Universal Robots UR5
 
-## Configuration
-
-Edit top-level constants in `Candidates_iteration.py` and `Candidate_Grip_test.py` to change timing, friction, and gripper parameters. Key parameters:
-
-- `T_HOME_SETTLE`, `T_TO_PRE`, `T_TO_GRIP` — motion timing
-- `CLOSE_MAG`, `CLOSE_RAMP_TIME` — gripper closing behavior
-- `FRICTION_MULT`, `GRIPPER_STRENGTH_MULT` — stability multipliers
-- `TARGET_PINCH` — desired pinch width
-
----
-
-## Troubleshooting
-
-- MuJoCo errors: ensure `UR5.xml` and required scene files are accessible; set `XML_PATH` in scripts.
-- Candidate JSON issues: validate against `candidates_reduced.json` format (array of candidate objects with `grip_point`, `pre_grip`, etc.).
-- FreeCAD macros: run macros from within FreeCAD; some require specific workbenches.
-
----
-
-## How to contribute
-
-- Open issues for bugs or feature requests.
-- Send PRs that include tests or reproducible examples. Keep changes small and focused.
-
----
-
-## Maintainers & support
-
-Maintained by milton-stark. For support or questions, open a GitHub Issue on this repository or contact the maintainer via GitHub.
-
----
-
-## Workflow diagram
-
-```mermaid
-graph LR
-  CAD[CAD/ (3D models)] --> A[FreeCAD macros\n(macros/*.FCMacro)]
-  A --> B[candidates_reduced.json]
-  B --> C[Candidates_iteration.py\n(batch simulate & score)]
-  C --> D[candidate_eval_results.json]
-  C --> E[best_candidate_single_grasp.json]
-  E --> F[Candidate_Grip_test.py\n(single-case validate)]
-  F --> G[Logs / visual check\n(MuJoCo viewer, MUJOCO_LOG.TXT)]
-  C -.->|uses| X[UR5.xml, mesh/, textures/]
-  F -.->|uses| X
-```
-
-## Thesis & assets
-
-This repository contains your CAD models and thesis artifacts; quick links for reviewers:
-
-- CAD models: `CAD/` — examples: [CAD/battery.stl](CAD/battery.stl), [CAD/casing_new.stl](CAD/casing_new.stl)
-- 3D meshes used by simulations: `mesh/visual/` (battery.stl, casing.stl, robot links)
-- Thesis report (PDF): [Report/Sepasthiyammal,Milton,1702059_Thesis.pdf](Report/Sepasthiyammal,Milton,1702059_Thesis.pdf)
-- Presentation: [Report/Thesis Presentation.pptx](Report/Thesis Presentation.pptx)
-
-Include these files when preparing artefacts for review or submission. The thesis contains methodology, experimental results, and evaluation plots derived from `candidate_eval_results.json`.
-
----
-
-## References
-
-- MuJoCo: https://github.com/deepmind/mujoco
-- FreeCAD: https://www.freecadweb.org/
-- Universal Robots (UR5): https://www.universal-robots.com/
