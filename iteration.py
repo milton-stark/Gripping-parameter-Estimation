@@ -6,7 +6,7 @@ import mujoco
 # =========================
 # FILES
 # =========================
-XML_PATH = "scene_test.xml"
+XML_PATH = "UR5.xml"
 JSON_PATH = "candidates_reduced.json"
 
 RESULTS_PATH = "candidate_eval_results.json"
