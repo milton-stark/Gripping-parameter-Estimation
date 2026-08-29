@@ -1,9 +1,3 @@
-﻿# Gripping Parameter Estimation
-
-A compact, MuJoCo-based simulation framework for generating, evaluating, and validating robotic grasp candidates for a UR5 arm with a parallel-jaw gripper. The repo automates candidate generation from CAD, batch simulation-based evaluation, and single-case validation so you can find robust gripping parameters quickly.
-
----
-
 # Gripping Parameter Estimation
 
 Simulation framework for finding reliable grasp parameters for a UR5 with a parallel-jaw gripper. Grasp candidates are generated from a CAD model, scored in bulk in MuJoCo, and the best one is re-run on its own for verification — so grip points and forces are settled before anything is tried on hardware.
