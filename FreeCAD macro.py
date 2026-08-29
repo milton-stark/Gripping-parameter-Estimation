@@ -1,3 +1,5 @@
+# FreeCAD macro that generates candidates for gripping a selected object and saves the data in candidates_reduced JSON file. 
+# The macro also visualizes the grip point, pre-grip, and post-grip positions in the FreeCAD GUI.
 from pydoc import doc
 
 import FreeCAD as App
