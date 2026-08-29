@@ -1,4 +1,4 @@
-# Gripping Parameter Estimation
+﻿# Gripping Parameter Estimation
 
 A compact, MuJoCo-based simulation framework for generating, evaluating, and validating robotic grasp candidates for a UR5 arm with a parallel-jaw gripper. The repo automates candidate generation from CAD, batch simulation-based evaluation, and single-case validation so you can find robust gripping parameters quickly.
 
@@ -100,6 +100,34 @@ Edit top-level constants in `Candidates_iteration.py` and `Candidate_Grip_test.p
 ## Maintainers & support
 
 Maintained by milton-stark. For support or questions, open a GitHub Issue on this repository or contact the maintainer via GitHub.
+
+---
+
+## Workflow diagram
+
+```mermaid
+graph LR
+  CAD[CAD/ (3D models)] --> A[FreeCAD macros\n(macros/*.FCMacro)]
+  A --> B[candidates_reduced.json]
+  B --> C[Candidates_iteration.py\n(batch simulate & score)]
+  C --> D[candidate_eval_results.json]
+  C --> E[best_candidate_single_grasp.json]
+  E --> F[Candidate_Grip_test.py\n(single-case validate)]
+  F --> G[Logs / visual check\n(MuJoCo viewer, MUJOCO_LOG.TXT)]
+  C -.->|uses| X[UR5.xml, mesh/, textures/]
+  F -.->|uses| X
+```
+
+## Thesis & assets
+
+This repository contains your CAD models and thesis artifacts; quick links for reviewers:
+
+- CAD models: `CAD/` — examples: [CAD/battery.stl](CAD/battery.stl), [CAD/casing_new.stl](CAD/casing_new.stl)
+- 3D meshes used by simulations: `mesh/visual/` (battery.stl, casing.stl, robot links)
+- Thesis report (PDF): [Report/Sepasthiyammal,Milton,1702059_Thesis.pdf](Report/Sepasthiyammal,Milton,1702059_Thesis.pdf)
+- Presentation: [Report/Thesis Presentation.pptx](Report/Thesis Presentation.pptx)
+
+Include these files when preparing artefacts for review or submission. The thesis contains methodology, experimental results, and evaluation plots derived from `candidate_eval_results.json`.
 
 ---
 
